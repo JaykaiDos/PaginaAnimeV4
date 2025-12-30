@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Búsqueda de Animes - Anime Hub</title>
+  <link rel="stylesheet" href="../styles/search.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="main-header">
+    <h1>🔍 Búsqueda de Animes 🔍</h1>
+    <p class="season-subtitle">Explora toda nuestra colección</p>
+    <nav class="main-nav">
+      <a href="../index.html" class="footer-link">← Volver al Hub Principal</a>
+    </nav>
+  </header>
+
+  <!-- SEARCH CONTROLS -->
+  <div class="search-controls">
+    <div class="search-container">
+      <input type="search" id="searchBar" placeholder="Buscar por título..." aria-label="Buscar anime">
+    </div>
+    <div class="filter-container">
+      <select id="seasonFilter" aria-label="Filtrar por temporada">
+        <option value="all">Todas las Temporadas</option>
+        <option value="fall">Otoño 2025</option>
+        <option value="winter">Invierno 2025</option>
+        <option value="spring">Primavera 2025</option>
+        <option value="summer">Verano 2025</option>
+      </select>
+      <select id="sortFilter" aria-label="Ordenar por">
+        <option value="default">Orden por Defecto</option>
+        <option value="az">A-Z</option>
+        <option value="za">Z-A</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- RESULTS COUNTER -->
+  <div class="results-info">
+    <p id="resultsCount">Cargando animes...</p>
+  </div>
+
+  <!-- ANIME GRID -->
+  <div class="container">
+    <div class="anime-grid" id="animeGrid">
+
+    </div>
+    
+
+    <div id="no-results" style="display: none;">
+      <div class="no-results-message">
+        <span class="icon">😢</span>
+        <h2>No se encontraron resultados</h2>
+        <p>Intenta con otro término de búsqueda o filtro</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p class="credit">✨ Hecho por Jaykai2 ✨</p>
+    <p>&copy; 2025 Anime Hub. Todos los derechos reservados.</p>
+    <p><a href="../index.html" class="footer-link">← Volver al Hub Principal</a></p>
+  </footer>
+
+  <!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<!-- Firebase Config y Services -->
+<script src="../js/firebase-config.js"></script>
+<script src="../js/firebase-service.js"></script>
+
+<!-- Script de búsqueda (YA MODIFICADO) -->
+<script src="../js/search.js"></script>
+</body>
+</html>

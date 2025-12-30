@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración - Anime Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/admin.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="admin-header">
+    <div class="header-content">
+      <h1 class="admin-title">🎛️ Panel de Administración</h1>
+      <div class="header-actions">
+        <span class="user-info" id="userEmail">Cargando...</span>
+        <button class="btn-logout" onclick="window.authSystem.logoutAdmin()">
+          🚪 Cerrar Sesión
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="admin-nav">
+    <button class="nav-tab active" data-tab="seasons">
+      🗓️ Temporadas
+    </button>
+    <button class="nav-tab" data-tab="animes">
+      📺 Animes
+    </button>
+    <button class="nav-tab" data-tab="episodes">
+      🎬 Episodios
+    </button>
+  </nav>
+
+  <div class="admin-container">
+
+    <!-- ============================================ -->
+    <!-- TAB 1: GESTIÓN DE TEMPORADAS -->
+    <!-- ============================================ -->
+    <section class="tab-content active" id="seasons-tab">
+      <div class="section-header">
+        <h2 class="section-title">🗓️ Gestión de Temporadas</h2>
+        <button class="btn-primary" onclick="openSeasonModal()">
+          ➕ Nueva Temporada
+        </button>
+      </div>
+
+      <div class="seasons-grid" id="seasonsGrid">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Cargando temporadas...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- TAB 2: GESTIÓN DE ANIMES -->
+    <!-- ============================================ -->
+    <section class="tab-content" id="animes-tab">
+      <div class="section-header">
+        <h2 class="section-title">📺 Gestión de Animes</h2>
+        <button class="btn-primary" onclick="openAnimeModal()">
+          ➕ Nuevo Anime
+        </button>
+      </div>
+
+      <!-- Filtro por temporada -->
+      <div class="filter-section">
+        <label for="seasonFilter">Filtrar por temporada:</label>
+        <select id="seasonFilter" onchange="filterAnimesBySeason()">
+          <option value="all">Todas las temporadas</option>
+        </select>
+      </div>
+
+      <div class="animes-list" id="animesList">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Cargando animes...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- TAB 3: GESTIÓN DE EPISODIOS -->
+    <!-- ============================================ -->
+    <section class="tab-content" id="episodes-tab">
+      <div class="section-header">
+        <h2 class="section-title">🎬 Gestión de Episodios</h2>
+      </div>
+
+      <!-- Selector de anime -->
+      <div class="filter-section">
+        <label for="animeSelector">Selecciona un anime:</label>
+        <select id="animeSelector" onchange="loadEpisodesByAnime()">
+          <option value="">-- Selecciona un anime --</option>
+        </select>
+        <button class="btn-primary" onclick="openEpisodeModal()" id="addEpisodeBtn" disabled>
+          ➕ Nuevo Episodio
+        </button>
+      </div>
+
+      <div class="episodes-list" id="episodesList">
+        <p class="empty-state">Selecciona un anime para ver sus episodios</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MODAL: AGREGAR/EDITAR TEMPORADA -->
+  <!-- ============================================ -->
+  <div class="modal" id="seasonModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="seasonModalTitle">Nueva Temporada</h3>
+        <button class="btn-close" onclick="closeSeasonModal()">✕</button>
+      </div>
+      
+      <form id="seasonForm">
+        <div class="form-group">
+          <label for="seasonName">Nombre de la Temporada *</label>
+          <input type="text" id="seasonName" placeholder="Ej: Otoño 2025" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="seasonEmoji">Emoji</label>
+            <input type="text" id="seasonEmoji" placeholder="🍂" maxlength="2">
+          </div>
+          <div class="form-group">
+            <label for="seasonOrder">Orden</label>
+            <input type="number" id="seasonOrder" value="1" min="1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="seasonPeriod">Período *</label>
+          <input type="text" id="seasonPeriod" placeholder="Octubre - Diciembre" required>
+        </div>
+
+        <div class="form-group">
+          <label for="seasonStatus">Estado *</label>
+          <select id="seasonStatus" required>
+            <option value="active">Activo</option>
+            <option value="completed">Finalizado</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeSeasonModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary">
+            Guardar Temporada
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MODAL: AGREGAR/EDITAR ANIME -->
+  <!-- ============================================ -->
+  <div class="modal" id="animeModal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 class="modal-title" id="animeModalTitle">Nuevo Anime</h3>
+        <button class="btn-close" onclick="closeAnimeModal()">✕</button>
+      </div>
+      
+      <form id="animeForm">
+      <div class="form-group">
+  <label for="animeSeasonId">Vincular a Temporada *</label>
+  <select id="animeSeasonId" required>
+    <option value="">Cargando temporadas...</option>
+  </select>
+  <small>Esto determinará en qué página (Otoño, Invierno, etc.) aparecerá el anime.</small>
+</div>
+
+<div class="form-group">
+  <label for="animeTitle">Título del Anime *</label>
+  <input type="text" id="animeTitle" placeholder="Ej: Solo Leveling" required>
+</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="animeSeason">Temporada *</label>
+            <select id="animeSeason" required>
+              <option value="">-- Selecciona --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="animeCategory">Categoría *</label>
+            <select id="animeCategory" required>
+              <option value="continuation">⭐ Continuación</option>
+              <option value="new">🆕 Nuevo Estreno</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="animeYear">Año</label>
+            <input type="number" id="animeYear" value="2025" min="2000" max="2030">
+          </div>
+          <div class="form-group">
+            <label for="animeStatus">Estado</label>
+            <select id="animeStatus">
+              <option value="airing">En emisión</option>
+              <option value="completed">Finalizado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="animeOrder">Orden</label>
+            <input type="number" id="animeOrder" value="1" min="1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="animeCardImage">URL Imagen Card (para temporada) *</label>
+          <input type="url" id="animeCardImage" placeholder="https://..." required>
+        </div>
+
+        <div class="form-group">
+          <label for="animePoster">URL Póster (para detalles) *</label>
+          <input type="url" id="animePoster" placeholder="https://..." required>
+        </div>
+
+        <div class="form-group">
+          <label for="animeSynopsis">Sinopsis *</label>
+          <textarea id="animeSynopsis" rows="4" placeholder="Descripción del anime..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="animeTrailers">Trailers (URLs separadas por comas)</label>
+          <textarea id="animeTrailers" rows="2" placeholder="https://youtube.com/embed/..., https://youtube.com/embed/..."></textarea>
+          <small>Formato: URLs de YouTube embed separadas por comas</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeAnimeModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary">
+            Guardar Anime
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MODAL: AGREGAR EPISODIO -->
+  <!-- ============================================ -->
+  <div class="modal" id="episodeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Nuevo Episodio</h3>
+        <button class="btn-close" onclick="closeEpisodeModal()">✕</button>
+      </div>
+      
+      <form id="episodeForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="episodeNumber">Número de Episodio *</label>
+            <input type="number" id="episodeNumber" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="episodeDuration">Duración</label>
+            <input type="text" id="episodeDuration" value="24 min">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="episodeTitle">Título del Episodio *</label>
+          <input type="text" id="episodeTitle" placeholder="Episodio 1" required>
+        </div>
+
+        <div class="form-group">
+          <label for="episodeVideoUrl">URL del Video *</label>
+          <input type="url" id="episodeVideoUrl" placeholder="//ok.ru/videoembed/... o https://drive.google.com/..." required>
+          <small>Soporta: Ok.ru, Google Drive, YouTube, etc.</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeEpisodeModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary">
+            Guardar Episodio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  
+  <!-- Scripts -->
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/firebase-service.js"></script>
+  <script src="../js/admin-panel.js"></script>
+
+</body>
+</html>

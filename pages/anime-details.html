@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalles del Anime - Anime Hub</title>
+  <link rel="stylesheet" href="../styles/anime-details.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="main-header">
+    <nav class="breadcrumb">
+      <a href="../index.html">🏠 Hub</a>
+      <span>›</span>
+      <a href="search.html">🔍 Búsqueda</a>
+      <span>›</span>
+      <span class="current" id="breadcrumbTitle">Anime</span>
+    </nav>
+  </header>
+
+  <!-- ANIME DETAILS SECTION -->
+  <div class="container">
+    <div class="anime-details" id="animeDetails">
+      <!-- Contenido generado dinámicamente -->
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Cargando información...</p>
+      </div>
+    </div>
+
+    <!-- EPISODES SECTION -->
+    <section class="episodes-section" id="episodesSection" style="display: none;">
+      <h2 class="section-title">📺 Lista de Capítulos 📺</h2>
+      
+      <!-- EPISODES FILTER -->
+      <div class="episodes-filter">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="watched">Vistos</button>
+        <button class="filter-btn" data-filter="unwatched">Por Ver</button>
+      </div>
+
+      <!-- EPISODES GRID -->
+      <div class="episodes-grid" id="episodesGrid">
+        <!-- Capítulos generados dinámicamente -->
+      </div>
+    </section>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p class="credit">✨ Hecho por Jaykai2 ✨</p>
+    <p>&copy; 2025 Anime Hub. Todos los derechos reservados.</p>
+    <p><a href="../index.html" class="footer-link">← Volver al Hub Principal</a></p>
+  </footer>
+
+
+  <!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<!-- Firebase Config y Services -->
+<script src="../js/firebase-config.js"></script>
+<script src="../js/firebase-service.js"></script>
+
+<!-- Script de detalles (YA MODIFICADO) -->
+<script src="../js/anime-details.js"></script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Anime Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto Mono', monospace;
+      background-color: #0d0221;
+      background-image: 
+        radial-gradient(circle at 25% 30%, #26175e 0%, transparent 40%),
+        radial-gradient(circle at 75% 70%, #0d0221 0%, transparent 40%);
+      color: #ade8f4;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      background: linear-gradient(135deg, rgba(13, 2, 33, 0.95) 0%, rgba(38, 23, 94, 0.9) 100%);
+      border: 2px solid #48cae4;
+      border-radius: 20px;
+      padding: 3rem;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 0 40px rgba(72, 202, 228, 0.4);
+      backdrop-filter: blur(10px);
+    }
+
+    .login-title {
+      font-size: 2.5rem;
+      color: #caf0f8;
+      text-shadow: 0 0 15px #48cae4, 0 0 30px #00b4d8;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .login-subtitle {
+      text-align: center;
+      color: #6ee7b7;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      color: #48cae4;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.9rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 1rem;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 1rem;
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid #48cae480;
+      border-radius: 8px;
+      color: #ade8f4;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #48cae4;
+      box-shadow: 0 0 15px rgba(72, 202, 228, 0.5);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 1rem;
+      background: #48cae4;
+      border: none;
+      border-radius: 12px;
+      color: #0d0221;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.1em;
+      margin-top: 1rem;
+    }
+
+    .btn-login:hover {
+      background: #00b4d8;
+      box-shadow: 0 0 25px rgba(72, 202, 228, 0.8);
+      transform: translateY(-2px);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.2);
+      border: 2px solid #ef4444;
+      border-radius: 8px;
+      padding: 1rem;
+      color: #fca5a5;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #6ee7b7;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+      color: #34d399;
+      text-shadow: 0 0 10px #34d399;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #48cae4;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(72, 202, 228, 0.2);
+      border-top-color: #48cae4;
+      border-radius: 50%;
+      margin: 0 auto 1rem;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <h1 class="login-title">🔐 Admin Login</h1>
+    <p class="login-subtitle">Panel de Administración</p>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn-login" id="loginBtn">
+        Iniciar Sesión
+      </button>
+
+      <div class="error-message" id="errorMessage"></div>
+    </form>
+
+    <a href="../index.html" class="back-link">← Volver al inicio</a>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  
+  <!-- Firebase Config -->
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/auth.js"></script>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      // Deshabilitar botón
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Verificando...';
+      errorMessage.classList.remove('show');
+
+      // Intentar login
+      const result = await window.authSystem.loginAdmin(email, password);
+
+      if (result.success) {
+        // Redirigir al panel de admin
+        window.location.href = 'admin.html';
+      } else {
+        // Mostrar error
+        errorMessage.textContent = '❌ ' + (result.error || 'Error al iniciar sesión');
+        errorMessage.classList.add('show');
+        
+        // Reactivar botón
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Iniciar Sesión';
+      }
+    });
+
+    // Verificar si ya está logueado
+    window.addEventListener('load', async () => {
+      const isAdmin = await window.authSystem.checkIfAdmin();
+      if (isAdmin) {
+        window.location.href = 'admin.html';
+      }
+    });
+  </script>
+
+</body>
+</html>

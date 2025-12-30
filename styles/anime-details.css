@@ -1,0 +1,481 @@
+/* ============================================
+   ANIME DETAILS - ESTILOS MATRIX/NEON
+   Autor: Jaykai2
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto Mono', monospace;
+  background-color: #0d0221;
+  background-image: 
+    radial-gradient(circle at 25% 30%, #26175e 0%, transparent 40%),
+    radial-gradient(circle at 75% 70%, #0d0221 0%, transparent 40%);
+  color: #ade8f4;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* === HEADER & BREADCRUMB === */
+.main-header {
+  padding: 2rem 1rem;
+  border-bottom: 2px solid #48cae440;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-size: 0.95rem;
+}
+
+.breadcrumb a {
+  color: #48cae4;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+}
+
+.breadcrumb a:hover {
+  background: rgba(72, 202, 228, 0.2);
+  text-shadow: 0 0 10px #48cae4;
+}
+
+.breadcrumb span {
+  color: #48cae480;
+}
+
+.breadcrumb .current {
+  color: #6ee7b7;
+  text-shadow: 0 0 10px #34d399;
+  font-weight: 700;
+}
+
+/* === CONTAINER === */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* === LOADING STATE === */
+.loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #48cae4;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(72, 202, 228, 0.2);
+  border-top-color: #48cae4;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === ANIME DETAILS === */
+.anime-details {
+  background: linear-gradient(135deg, rgba(13, 2, 33, 0.9) 0%, rgba(38, 23, 94, 0.7) 100%);
+  border: 2px solid #48cae460;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.details-hero {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+/* === POSTER === */
+.anime-poster {
+  width: 100%;
+  height: 550px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 3px solid #48cae4;
+  box-shadow: 0 8px 24px rgba(72, 202, 228, 0.4);
+  transition: all 0.3s ease;
+}
+
+.anime-poster:hover {
+  box-shadow: 0 0 40px rgba(72, 202, 228, 0.6);
+  transform: scale(1.02);
+}
+
+/* === INFO SECTION === */
+.anime-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.anime-title {
+  font-size: 2.5rem;
+  color: #caf0f8;
+  text-shadow: 0 0 15px #48cae4, 0 0 30px #00b4d8;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.anime-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.meta-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.meta-badge.season {
+  background: rgba(72, 202, 228, 0.2);
+  border: 2px solid #48cae4;
+  color: #48cae4;
+}
+
+.meta-badge.status {
+  background: rgba(110, 231, 183, 0.2);
+  border: 2px solid #6ee7b7;
+  color: #6ee7b7;
+}
+
+.meta-badge.episodes {
+  background: rgba(254, 240, 138, 0.2);
+  border: 2px solid #fef08a;
+  color: #fef08a;
+}
+
+/* === SYNOPSIS === */
+.anime-synopsis {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #48cae420;
+}
+
+.anime-synopsis h3 {
+  color: #6ee7b7;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px #34d399;
+}
+
+.anime-synopsis p {
+  color: #ade8f4;
+  line-height: 1.8;
+  font-size: 1.05rem;
+}
+
+/* === ACTION BUTTONS === */
+.anime-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-primary {
+  background: #48cae4;
+  color: #0d0221;
+  box-shadow: 0 4px 15px rgba(72, 202, 228, 0.4);
+}
+
+.btn-primary:hover {
+  background: #00b4d8;
+  box-shadow: 0 0 25px rgba(72, 202, 228, 0.6);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: rgba(110, 231, 183, 0.2);
+  border: 2px solid #6ee7b7;
+  color: #6ee7b7;
+}
+
+.btn-secondary:hover {
+  background: #6ee7b7;
+  color: #0d0221;
+  transform: translateY(-2px);
+}
+
+.btn-secondary.active {
+  background: #34d399;
+  color: #0d0221;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.6);
+}
+
+/* === TRAILERS === */
+.anime-trailers {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #48cae420;
+}
+
+.anime-trailers h3 {
+  color: #fef08a;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 10px #facc15;
+  text-align: center;
+}
+
+.trailers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.trailers-grid iframe {
+  width: 100%;
+  height: 280px;
+  border-radius: 12px;
+  border: 3px solid #48cae4;
+  background: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.trailers-grid iframe:hover {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 30px rgba(72, 202, 228, 0.6);
+  transform: scale(1.02);
+}
+
+/* === EPISODES SECTION === */
+.episodes-section {
+  margin-top: 3rem;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #a7f3d0;
+  text-shadow: 0 0 15px #34d399;
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border-top: 2px solid #6ee7b740;
+  border-bottom: 2px solid #6ee7b740;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* === EPISODES FILTER === */
+.episodes-filter {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 0.8rem 1.5rem;
+  background: rgba(72, 202, 228, 0.1);
+  border: 2px solid #48cae4;
+  border-radius: 25px;
+  color: #48cae4;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-btn:hover {
+  background: rgba(72, 202, 228, 0.2);
+  transform: translateY(-2px);
+}
+
+.filter-btn.active {
+  background: #48cae4;
+  color: #0d0221;
+  box-shadow: 0 0 20px rgba(72, 202, 228, 0.6);
+}
+
+/* === EPISODES GRID === */
+.episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+/* === EPISODE CARD === */
+.episode-card {
+  background: linear-gradient(135deg, rgba(13, 2, 33, 0.9) 0%, rgba(38, 23, 94, 0.7) 100%);
+  border: 2px solid #48cae460;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.episode-card:hover {
+  border-color: #48cae4;
+  box-shadow: 0 0 25px rgba(72, 202, 228, 0.5);
+  transform: translateY(-5px);
+}
+
+.episode-card.watched {
+  border-color: #6ee7b780;
+  opacity: 0.7;
+}
+
+.episode-card.watched::before {
+  content: '✓';
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 30px;
+  height: 30px;
+  background: #34d399;
+  color: #0d0221;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.episode-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fef08a;
+  text-shadow: 0 0 10px #facc15;
+  margin-bottom: 0.5rem;
+}
+
+.episode-title {
+  font-size: 1.1rem;
+  color: #caf0f8;
+  margin-bottom: 0.8rem;
+  line-height: 1.3;
+  min-height: 2.6rem;
+}
+
+.episode-duration {
+  color: #48cae4;
+  font-size: 0.9rem;
+}
+
+/* === FOOTER === */
+footer {
+  text-align: center;
+  padding: 2rem;
+  border-top: 2px solid #48cae440;
+  margin-top: 3rem;
+  color: #48cae4;
+}
+
+footer .credit {
+  font-size: 1.2rem;
+  color: #6ee7b7;
+  text-shadow: 0 0 10px #34d399;
+  margin-bottom: 0.5rem;
+}
+
+footer p {
+  margin: 0.5rem 0;
+}
+
+.footer-link {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.8rem 1.5rem;
+  background: rgba(72, 202, 228, 0.1);
+  border: 2px solid #48cae4;
+  border-radius: 25px;
+  color: #ade8f4;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.footer-link:hover {
+  background: #48cae4;
+  color: #0d0221;
+  box-shadow: 0 0 20px #48cae4;
+  transform: translateY(-2px);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 968px) {
+  .details-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .anime-poster {
+    height: 450px;
+  }
+
+  .anime-title {
+    font-size: 2rem;
+  }
+
+  .episodes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .anime-poster {
+    height: 350px;
+  }
+
+  .anime-title {
+    font-size: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .trailers-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}

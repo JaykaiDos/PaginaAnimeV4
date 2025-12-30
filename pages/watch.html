@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ver Episodio - Anime Hub</title>
+  <link rel="stylesheet" href="../styles/watch.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="main-header">
+    <nav class="breadcrumb">
+      <a href="../index.html">🏠 Hub</a>
+      <span>›</span>
+      <a href="search.html">🔍 Búsqueda</a>
+      <span>›</span>
+      <a href="#" id="animeLink">📺 Anime</a>
+      <span>›</span>
+      <span class="current" id="episodeTitle">Episodio</span>
+    </nav>
+  </header>
+
+  <!-- VIDEO PLAYER SECTION -->
+  <div class="container">
+    <div class="player-section">
+      
+      <!-- VIDEO PLAYER -->
+      <div class="video-container" id="videoContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Cargando video...</p>
+        </div>
+      </div>
+
+      <!-- VIDEO INFO -->
+      <div class="video-info">
+        <h1 class="video-title" id="videoTitle">Cargando...</h1>
+        <div class="video-meta">
+          <span class="meta-item" id="animeTitle">📺 Anime</span>
+          <span class="meta-item" id="episodeNumber">EP 1</span>
+          <span class="meta-item">⏱️ 24 min</span>
+        </div>
+      </div>
+
+      <!-- VIDEO CONTROLS -->
+      <div class="video-controls">
+        <button class="control-btn" id="prevBtn" onclick="previousEpisode()">
+          ⏮️ Anterior
+        </button>
+        <button class="control-btn primary" id="markWatchedBtn" onclick="toggleWatched()">
+          ✓ Marcar como Visto
+        </button>
+        <button class="control-btn" id="nextBtn" onclick="nextEpisode()">
+          Siguiente ⏭️
+        </button>
+      </div>
+    </div>
+
+    <!-- EPISODES SIDEBAR -->
+    <aside class="episodes-sidebar">
+      <h2 class="sidebar-title">📋 Lista de Episodios</h2>
+      <div class="episodes-list" id="episodesList">
+        <!-- Episodios generados dinámicamente -->
+      </div>
+    </aside>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p class="credit">✨ Hecho por Jaykai2 ✨</p>
+    <p>&copy; 2025 Anime Hub. Todos los derechos reservados.</p>
+    <p><a href="../index.html" class="footer-link">← Volver al Hub Principal</a></p>
+  </footer>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<!-- Firebase Config y Services -->
+<script src="../js/firebase-config.js"></script>
+<script src="../js/firebase-service.js"></script>
+
+<!-- Script de reproducción (YA MODIFICADO) -->
+<script src="../js/watch.js"></script>
+
+</body>
+</html>

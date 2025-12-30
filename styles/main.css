@@ -1,0 +1,582 @@
+/* ============================================
+   ANIME HUB - ESTILOS PRINCIPALES
+   Autor: Jaykai2
+   Diseño: Matrix/Neon Cyberpunk
+   ============================================ */
+
+/* === RESET Y BASE === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Roboto Mono', monospace;
+  background-color: #0d0221;
+  background-image: 
+    radial-gradient(circle at 25% 30%, #26175e 0%, transparent 40%),
+    radial-gradient(circle at 75% 70%, #0d0221 0%, transparent 40%);
+  color: #ade8f4;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+.main-header {
+  background: linear-gradient(135deg, rgba(13, 2, 33, 0.95) 0%, rgba(38, 23, 94, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  border-bottom: 2px solid #48cae440;
+  padding: 2rem 0;
+  /* position: sticky; <-- ELIMINADO/COMENTADO */
+  /* top: 0;           <-- ELIMINADO/COMENTADO */
+  /* z-index: 100;     <-- ELIMINADO/COMENTADO */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.header-content {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.logo {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #caf0f8;
+  text-shadow: 0 0 15px #48cae4, 0 0 30px #00b4d8;
+  margin-bottom: 0.5rem;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 15px #48cae4, 0 0 30px #00b4d8;
+  }
+  to {
+    text-shadow: 0 0 20px #48cae4, 0 0 40px #00b4d8, 0 0 60px #0077b6;
+  }
+}
+
+.tagline {
+  color: #6ee7b7;
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px #34d399;
+}
+
+/* === NAVEGACIÓN === */
+.main-nav {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.nav-link {
+  color: #ade8f4;
+  text-decoration: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.9rem;
+  border: 2px solid transparent;
+}
+
+.nav-link:hover {
+  background: rgba(72, 202, 228, 0.2);
+  border-color: #48cae4;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.nav-link.active {
+  background: #48cae4;
+  color: #0d0221;
+  box-shadow: 0 0 15px #48cae4;
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+.hero-section {
+  padding: 6rem 2rem;
+  text-align: center;
+  background: linear-gradient(180deg, transparent 0%, rgba(72, 202, 228, 0.05) 100%);
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  color: #caf0f8;
+  text-shadow: 0 0 20px #48cae4;
+  margin-bottom: 1rem;
+  animation: fadeInUp 1s ease-out;
+}
+
+.hero-subtitle {
+  font-size: 1.5rem;
+  color: #6ee7b7;
+  margin-bottom: 3rem;
+  animation: fadeInUp 1.2s ease-out;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 4rem;
+  flex-wrap: wrap;
+  animation: fadeInUp 1.4s ease-out;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background: rgba(13, 2, 33, 0.7);
+  border: 2px solid #48cae440;
+  border-radius: 12px;
+  min-width: 150px;
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  border-color: #48cae4;
+  box-shadow: 0 0 25px #48cae480;
+  transform: translateY(-5px);
+}
+
+.stat-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #fef08a;
+  text-shadow: 0 0 15px #facc15;
+}
+
+.stat-label {
+  font-size: 1rem;
+  color: #ade8f4;
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   SEASONS SECTION
+   ============================================ */
+.seasons-section {
+  padding: 4rem 2rem;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #a7f3d0;
+  text-shadow: 0 0 15px #34d399;
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 1rem;
+  border-top: 2px solid #6ee7b740;
+  border-bottom: 2px solid #6ee7b740;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.seasons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* === SEASON CARDS === */
+.season-card {
+  background: linear-gradient(135deg, rgba(13, 2, 33, 0.9) 0%, rgba(38, 23, 94, 0.7) 100%);
+  border: 2px solid #48cae460;
+  border-radius: 20px;
+  padding: 2rem;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.season-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(72, 202, 228, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.season-card:hover::before {
+  opacity: 1;
+}
+
+.season-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 0 40px rgba(72, 202, 228, 0.6);
+}
+
+/* Colores específicos por temporada */
+.season-card.fall {
+  border-color: #ff8c4260;
+}
+
+.season-card.fall:hover {
+  box-shadow: 0 0 40px rgba(255, 140, 66, 0.6);
+}
+
+.season-card.winter {
+  border-color: #87ceeb60;
+}
+
+.season-card.winter:hover {
+  box-shadow: 0 0 40px rgba(135, 206, 235, 0.6);
+}
+
+.season-card.spring {
+  border-color: #ffb3d960;
+}
+
+.season-card.spring:hover {
+  box-shadow: 0 0 40px rgba(255, 179, 217, 0.6);
+}
+
+.season-card.summer {
+  border-color: #ffd70060;
+}
+
+.season-card.summer:hover {
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+}
+
+.season-icon {
+  font-size: 4rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 0 10px rgba(72, 202, 228, 0.5));
+}
+
+.season-name {
+  font-size: 2rem;
+  color: #caf0f8;
+  text-shadow: 0 0 10px #48cae4;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.season-period {
+  text-align: center;
+  color: #6ee7b7;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.season-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.anime-count {
+  color: #fef08a;
+  font-weight: 700;
+}
+
+.status-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.active {
+  background: #34d399;
+  color: #0d0221;
+  box-shadow: 0 0 10px #34d399;
+  animation: pulse 2s infinite;
+}
+
+.status-badge.completed {
+  background: rgba(72, 202, 228, 0.3);
+  color: #ade8f4;
+  border: 1px solid #48cae4;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px #34d399;
+  }
+  50% {
+    box-shadow: 0 0 20px #34d399, 0 0 30px #10b981;
+  }
+}
+
+.season-description {
+  color: #ade8f4;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.season-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1rem;
+  background: rgba(72, 202, 228, 0.1);
+  border: 2px solid #48cae4;
+  border-radius: 12px;
+  color: #ade8f4;
+  text-decoration: none;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.3s ease;
+}
+
+.season-btn:hover {
+  background: #48cae4;
+  color: #0d0221;
+  box-shadow: 0 0 20px #48cae4;
+  transform: scale(1.05);
+}
+
+.season-btn .arrow {
+  transition: transform 0.3s ease;
+}
+
+.season-btn:hover .arrow {
+  transform: translateX(5px);
+}
+
+/* ============================================
+   FAVORITES PREVIEW
+   ============================================ */
+.favorites-preview {
+  padding: 4rem 2rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.no-favorites {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #48cae480;
+  font-style: italic;
+  padding: 3rem;
+  font-size: 1.1rem;
+}
+
+/* ============================================
+   ABOUT SECTION
+   ============================================ */
+.about-section {
+  padding: 4rem 2rem;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.about-card {
+  background: rgba(13, 2, 33, 0.7);
+  border: 2px solid #48cae440;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.about-card:hover {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 25px rgba(110, 231, 183, 0.5);
+  transform: translateY(-5px);
+}
+
+.about-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.about-card h3 {
+  color: #caf0f8;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px #48cae4;
+}
+
+.about-card p {
+  color: #ade8f4;
+  line-height: 1.7;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.main-footer {
+  background: linear-gradient(135deg, rgba(13, 2, 33, 0.95) 0%, rgba(38, 23, 94, 0.9) 100%);
+  border-top: 2px solid #48cae440;
+  padding: 3rem 2rem 1rem;
+  margin-top: 4rem;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.footer-section h4 {
+  color: #6ee7b7;
+  text-shadow: 0 0 10px #34d399;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.footer-section p {
+  color: #ade8f4;
+  line-height: 1.6;
+}
+
+.footer-section ul {
+  list-style: none;
+}
+
+.footer-section ul li {
+  margin-bottom: 0.5rem;
+}
+
+.footer-section a {
+  color: #ade8f4;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.footer-section a:hover {
+  color: #48cae4;
+  text-shadow: 0 0 10px #48cae4;
+  padding-left: 5px;
+}
+
+.social-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.social-link {
+  padding: 0.5rem 1rem;
+  background: rgba(72, 202, 228, 0.1);
+  border: 1px solid #48cae4;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.social-link:hover {
+  background: #48cae4;
+  color: #0d0221 !important;
+  box-shadow: 0 0 15px #48cae4;
+  padding-left: 1rem !important;
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 1px solid #48cae420;
+  color: #48cae480;
+}
+
+.footer-bottom p {
+  margin: 0.5rem 0;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .logo {
+    font-size: 2rem;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .hero-stats {
+    gap: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+  }
+
+  .main-nav {
+    gap: 0.5rem;
+  }
+
+  .nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .seasons-grid {
+    grid-template-columns: 1fr;
+  }
+}

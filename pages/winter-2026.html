@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anime Invierno 2025</title>
+  <link rel="stylesheet" href="../styles/seasonsInvierno.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- BOTÓN DE REGRESO -->
+
+  <header class="main-header">
+    <h1>🎌 Anime Invierno 2025 🎌</h1>
+    <p class="season-subtitle">❄️ Enero - Marzo 2025</p>
+        <nav class="main-nav">
+    <p><a href="../index.html" class="footer-link">← Volver al Hub Principal</a></p>
+        </nav>
+  </header>
+
+  <div class="controls">
+    <div class="search-container">
+      <input type="search" id="searchBar" placeholder="Buscar anime por título..." aria-label="Buscar anime">
+    </div>
+    <button id="darkModeToggle" aria-label="Cambiar modo oscuro">Modo Alternativo</button>
+  </div>
+
+<div class="container" id="animeContainer" data-season-id="glrlCdE969CdT1p8bPVJ">
+  <div class="loading-state" style="text-align: center; color: #48cae4; padding: 3rem;">
+     <p>Cargando animes de la temporada...</p>
+  </div>
+</div>
+
+  <!-- ============================================ -->
+  <!-- SECCIÓN: FAVORITOS -->
+  <!-- ============================================ -->
+  <section class="favorites">
+    <h2>⭐ Mis Favoritos ⭐</h2>
+    <button id="clearFavoritesBtn">Limpiar Favoritos</button>
+    <p class="fav-list none">No tienes animes favoritos aún.</p>
+    <ul class="fav-list"></ul>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- FOOTER -->
+  <!-- ============================================ -->
+  <footer>
+    <p class="credit">✨ Hecho por Jaykai2 ✨</p>
+    <p>A</p>
+    <p><a href="../index.html" class="footer-link">← Volver al Hub Principal</a></p>
+  </footer>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script src="../js/firebase-config.js"></script>
+
+<script src="../js/firebase-service.js"></script>
+
+<script src="../js/seasons.js"></script>
+
+</body>
+</html>
