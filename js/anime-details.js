@@ -38,6 +38,8 @@ const loadAnimeFromFirebase = async (animeId) => {
   animeDetails.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando información del anime...</p></div>';
   
   try {
+    console.log('🔍 Cargando anime con ID:', animeId);
+    
     // Obtener anime desde Firebase
     const anime = await window.firebaseService.getAnimeById(animeId);
     
@@ -52,6 +54,8 @@ const loadAnimeFromFirebase = async (animeId) => {
       `;
       return null;
     }
+    
+    console.log('✅ Anime cargado:', anime);
     
     // Obtener temporada
     const seasons = await window.firebaseService.getAllSeasons();
@@ -73,7 +77,7 @@ const loadAnimeFromFirebase = async (animeId) => {
     return currentAnime;
     
   } catch (error) {
-    console.error('Error al cargar anime:', error);
+    console.error('❌ Error al cargar anime:', error);
     animeDetails.innerHTML = `
       <div style="text-align: center; padding: 4rem 2rem;">
         <span style="font-size: 5rem;">❌</span>
@@ -86,24 +90,39 @@ const loadAnimeFromFirebase = async (animeId) => {
 };
 
 // ============================================
-// CARGAR EPISODIOS DESDE FIREBASE
+// CARGAR EPISODIOS DESDE FIREBASE - MEJORADO
 // ============================================
 const loadEpisodesFromFirebase = async (animeId) => {
   try {
+    console.log('📺 Cargando episodios para anime:', animeId);
+    
     const episodes = await window.firebaseService.getEpisodesByAnime(animeId);
+    
+    console.log('✅ Episodios obtenidos de Firebase:', episodes.length);
+    
+    if (episodes.length === 0) {
+      console.log('⚠️ No se encontraron episodios');
+      currentEpisodes = [];
+      return [];
+    }
     
     // Transformar al formato esperado
     currentEpisodes = episodes.map(ep => ({
       number: ep.episodeNumber,
       title: ep.title,
-      duration: ep.duration
+      duration: ep.duration,
+      videoUrl: ep.videoUrl // Importante: guardar la URL del video
     }));
     
-    console.log(`📺 ${currentEpisodes.length} episodios cargados`);
+    // Ordenar por número de episodio
+    currentEpisodes.sort((a, b) => a.number - b.number);
+    
+    console.log(`✅ ${currentEpisodes.length} episodios transformados:`, currentEpisodes);
     return currentEpisodes;
     
   } catch (error) {
-    console.error('Error al cargar episodios:', error);
+    console.error('❌ Error al cargar episodios:', error);
+    currentEpisodes = [];
     return [];
   }
 };
@@ -158,10 +177,23 @@ const renderAnimeDetails = (anime) => {
 };
 
 // ============================================
-// RENDERIZAR LISTA DE EPISODIOS
+// RENDERIZAR LISTA DE EPISODIOS - CORREGIDO
 // ============================================
 const renderEpisodes = (filter = 'all') => {
-  if (!currentAnime || !currentEpisodes || currentEpisodes.length === 0) {
+  console.log('🎨 Renderizando episodios. Total:', currentEpisodes.length, 'Filtro:', filter);
+  
+  if (!currentAnime) {
+    console.warn('⚠️ No hay anime actual');
+    episodesGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #48cae480;">
+        <p>No se ha cargado el anime</p>
+      </div>
+    `;
+    return;
+  }
+  
+  if (!currentEpisodes || currentEpisodes.length === 0) {
+    console.log('ℹ️ No hay episodios disponibles');
     episodesGrid.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #48cae480;">
         <p>Este anime aún no tiene episodios disponibles</p>
@@ -188,6 +220,8 @@ const renderEpisodes = (filter = 'all') => {
     return;
   }
 
+  console.log('✅ Renderizando', episodes.length, 'episodios en el DOM');
+
   episodesGrid.innerHTML = episodes.map(episode => `
     <article class="episode-card ${watchedEpisodes.includes(episode.number) ? 'watched' : ''}"
              onclick="playEpisode(${episode.number})">
@@ -202,6 +236,8 @@ const renderEpisodes = (filter = 'all') => {
 // REPRODUCIR EPISODIO
 // ============================================
 window.playEpisode = (episodeNumber) => {
+  console.log('▶️ Reproduciendo episodio:', episodeNumber);
+  
   // Marcar como visto
   if (!watchedEpisodes.includes(episodeNumber)) {
     watchedEpisodes.push(episodeNumber);
@@ -283,11 +319,13 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================
-// CARGAR ANIME DESDE URL
+// CARGAR ANIME DESDE URL - MEJORADO
 // ============================================
 const loadAnime = async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const animeId = urlParams.get('id');
+  
+  console.log('🚀 Iniciando carga de anime. ID:', animeId);
   
   if (!animeId) {
     animeDetails.innerHTML = `
@@ -304,10 +342,14 @@ const loadAnime = async () => {
   // Cargar anime desde Firebase
   const anime = await loadAnimeFromFirebase(animeId);
   
-  if (!anime) return;
+  if (!anime) {
+    console.error('❌ No se pudo cargar el anime');
+    return;
+  }
   
   // Cargar episodios vistos
   watchedEpisodes = loadWatchedEpisodes(animeId);
+  console.log('📋 Episodios vistos previamente:', watchedEpisodes);
 
   // Actualizar breadcrumb
   breadcrumbTitle.textContent = anime.title;
@@ -315,11 +357,16 @@ const loadAnime = async () => {
   // Renderizar detalles
   renderAnimeDetails(anime);
   
-  // Cargar y mostrar episodios
+  // Mostrar sección de episodios
   episodesSection.style.display = 'block';
   episodesGrid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando episodios...</p></div>';
   
+  // Cargar y mostrar episodios
   await loadEpisodesFromFirebase(animeId);
+  
+  console.log('🎬 Total de episodios cargados:', currentEpisodes.length);
+  
+  // Renderizar episodios
   renderEpisodes(currentFilter);
 };
 
@@ -331,6 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Esperar a que Firebase esté listo
   if (window.firebaseService) {
+    console.log('✅ Firebase Service disponible');
     await loadAnime();
   } else {
     console.error('❌ Firebase Service no está disponible');

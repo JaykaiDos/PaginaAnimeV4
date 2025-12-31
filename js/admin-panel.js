@@ -250,14 +250,14 @@ window.openAnimeModal = (animeId = null) => {
     if (anime) {
       title.textContent = 'Editar Anime';
       
-      // Vinculación con la temporada (Asegúrate de que el ID en el HTML sea animeSeasonId)
+      // Vinculación con la temporada
       document.getElementById('animeSeasonId').value = anime.seasonId || "";
       
       // Resto de campos
       document.getElementById('animeTitle').value = anime.title || "";
-      document.getElementById('animeCategory').value = anime.category || "TV";
+      document.getElementById('animeCategory').value = anime.category || "new";
       document.getElementById('animeYear').value = anime.year || 2025;
-      document.getElementById('animeStatus').value = anime.status || "emision";
+      document.getElementById('animeStatus').value = anime.status || "airing";
       document.getElementById('animeOrder').value = anime.order || 1;
       document.getElementById('animeCardImage').value = anime.cardImage || "";
       document.getElementById('animePoster').value = anime.poster || "";
@@ -310,7 +310,7 @@ const deleteAnimeHandler = async (animeId) => {
 };
 
 // ============================================
-// GESTIÓN DE EPISODIOS
+// GESTIÓN DE EPISODIOS - MEJORADO
 // ============================================
 
 // Cargar episodios por anime
@@ -330,26 +330,33 @@ window.loadEpisodesByAnime = async () => {
   addBtn.disabled = false;
   list.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>';
   
-  currentEpisodes = await getEpisodesByAnime(selectedAnimeId);
-  
-  if (currentEpisodes.length === 0) {
-    list.innerHTML = '<p class="empty-state">Este anime no tiene episodios</p>';
-    return;
+  try {
+    currentEpisodes = await getEpisodesByAnime(selectedAnimeId);
+    
+    console.log(`📺 ${currentEpisodes.length} episodios cargados`);
+    
+    if (currentEpisodes.length === 0) {
+      list.innerHTML = '<p class="empty-state">Este anime no tiene episodios</p>';
+      return;
+    }
+    
+    list.innerHTML = currentEpisodes.map(ep => `
+      <div class="episode-item">
+        <div class="episode-item-info">
+          <div class="episode-item-number">EP ${ep.episodeNumber}</div>
+          <div class="episode-item-title">${ep.title} • ${ep.duration}</div>
+        </div>
+        <div class="episode-item-actions">
+          <button class="btn-danger" onclick="confirmDeleteEpisode('${ep.id}')">
+            🗑️ Eliminar
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('❌ Error al cargar episodios:', error);
+    list.innerHTML = '<p class="empty-state" style="color: #ef4444;">Error al cargar episodios</p>';
   }
-  
-  list.innerHTML = currentEpisodes.map(ep => `
-    <div class="episode-item">
-      <div class="episode-item-info">
-        <div class="episode-item-number">EP ${ep.episodeNumber}</div>
-        <div class="episode-item-title">${ep.title} • ${ep.duration}</div>
-      </div>
-      <div class="episode-item-actions">
-        <button class="btn-danger" onclick="confirmDeleteEpisode('${ep.id}')">
-          🗑️ Eliminar
-        </button>
-      </div>
-    </div>
-  `).join('');
 };
 
 // Abrir modal de episodio
@@ -401,7 +408,7 @@ const deleteEpisodeHandler = async (episodeId) => {
 
 // Actualizar selector de temporadas
 const updateSeasonSelectors = () => {
-  const selectors = ['animeSeason', 'seasonFilter'];
+  const selectors = ['seasonFilter'];
   
   selectors.forEach(selectId => {
     const select = document.getElementById(selectId);
@@ -482,7 +489,6 @@ const initForms = () => {
     const animeData = {
       seasonId: document.getElementById('animeSeasonId').value,
       title: document.getElementById('animeTitle').value,
-      seasonId: document.getElementById('animeSeason').value,
       category: document.getElementById('animeCategory').value,
       year: parseInt(document.getElementById('animeYear').value),
       status: document.getElementById('animeStatus').value,
@@ -510,9 +516,14 @@ const initForms = () => {
     await loadSeasons();
   });
   
-  // Formulario de episodio
+  // Formulario de episodio - CORREGIDO
   document.getElementById('episodeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    if (!selectedAnimeId) {
+      alert('⚠️ Error: No hay un anime seleccionado');
+      return;
+    }
     
     const episodeData = {
       animeId: selectedAnimeId,
@@ -522,14 +533,18 @@ const initForms = () => {
       videoUrl: document.getElementById('episodeVideoUrl').value
     };
     
+    console.log('📤 Enviando episodio:', episodeData);
+    
     const result = await addEpisode(episodeData);
+    
     if (result.success) {
-      alert('✅ Episodio agregado');
+      alert('✅ Episodio agregado correctamente');
       closeEpisodeModal();
-      await loadEpisodesByAnime();
-      await loadAllAnimes();
+      await loadEpisodesByAnime(); // Recargar lista de episodios
+      await loadAllAnimes(); // Actualizar contador en la lista de animes
     } else {
-      alert('❌ Error al agregar episodio');
+      alert('❌ Error al agregar episodio: ' + (result.error?.message || 'Error desconocido'));
+      console.error('Error completo:', result.error);
     }
   });
 };

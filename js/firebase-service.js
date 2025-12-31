@@ -14,20 +14,6 @@ window.firebaseService = {
   // ============================================
   // SEASONS (TEMPORADAS)
   // ============================================
-  // En firebase-service.js, dentro del objeto window.firebaseService
-getAnimeById: async (animeId) => {
-  try {
-    const doc = await window.firebaseDB.animesRef.doc(animeId).get();
-    if (!doc.exists) {
-      return null;
-    }
-    return { id: doc.id, ...doc.data() };
-  } catch (error) {
-    console.error('Error al obtener anime por ID:', error);
-    return null;
-  }
-},
-
   getAllSeasons: async () => {
     try {
       const snapshot = await window.firebaseDB.seasonsRef.orderBy('order').get();
@@ -77,11 +63,24 @@ getAnimeById: async (animeId) => {
     }
   },
 
-getAnimesBySeason: async (seasonId) => {
+  getAnimeById: async (animeId) => {
+    try {
+      const doc = await window.firebaseDB.animesRef.doc(animeId).get();
+      if (!doc.exists) {
+        console.warn('⚠️ Anime no encontrado:', animeId);
+        return null;
+      }
+      return { id: doc.id, ...doc.data() };
+    } catch (error) {
+      console.error('❌ Error al obtener anime por ID:', error);
+      return null;
+    }
+  },
+
+  getAnimesBySeason: async (seasonId) => {
     try {
       const snapshot = await window.firebaseDB.animesRef
         .where('seasonId', '==', seasonId)
-        // .orderBy('order')  <-- Comenta o borra esta línea para probar
         .get();
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -97,8 +96,10 @@ getAnimesBySeason: async (seasonId) => {
         totalEpisodes: 0,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      console.log('✅ Anime agregado:', docRef.id);
       return { success: true, id: docRef.id };
     } catch (error) {
+      console.error('❌ Error al agregar anime:', error);
       return { success: false, error };
     }
   },
@@ -106,8 +107,10 @@ getAnimesBySeason: async (seasonId) => {
   updateAnime: async (animeId, animeData) => {
     try {
       await window.firebaseDB.animesRef.doc(animeId).update(animeData);
+      console.log('✅ Anime actualizado:', animeId);
       return { success: true };
     } catch (error) {
+      console.error('❌ Error al actualizar anime:', error);
       return { success: false, error };
     }
   },
@@ -115,60 +118,105 @@ getAnimesBySeason: async (seasonId) => {
   deleteAnime: async (animeId) => {
     try {
       await window.firebaseDB.animesRef.doc(animeId).delete();
+      console.log('✅ Anime eliminado:', animeId);
       return { success: true };
     } catch (error) {
+      console.error('❌ Error al eliminar anime:', error);
       return { success: false, error };
     }
   },
 
   // ============================================
-  // EPISODES (EPISODIOS)
+  // EPISODES (EPISODIOS) - CORREGIDO
   // ============================================
   getEpisodesByAnime: async (animeId) => {
     try {
+      console.log('🔍 Buscando episodios para anime:', animeId);
+      
       const snapshot = await window.firebaseDB.episodesRef
         .where('animeId', '==', animeId)
         .orderBy('episodeNumber')
         .get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      console.log('📊 Episodios encontrados:', snapshot.size);
+      
+      const episodes = snapshot.docs.map(doc => {
+        const data = { id: doc.id, ...doc.data() };
+        console.log('📺 Episodio:', data.episodeNumber, '-', data.title);
+        return data;
+      });
+      
+      return episodes;
     } catch (error) {
-      console.error('Error al obtener episodios:', error);
+      console.error('❌ Error al obtener episodios:', error);
+      console.error('Detalles:', error.code, error.message);
       return [];
     }
   },
 
   addEpisode: async (episodeData) => {
     try {
+      console.log('📤 Agregando episodio:', episodeData);
+      
+      // 1. Agregar el episodio a Firestore
       const docRef = await window.firebaseDB.episodesRef.add({
         ...episodeData,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
-      // Actualizar contador en el anime
-      const episodes = await window.firebaseService.getEpisodesByAnime(episodeData.animeId);
+      console.log('✅ Episodio agregado con ID:', docRef.id);
+      
+      // 2. Obtener todos los episodios del anime para recalcular el total
+      const episodesSnapshot = await window.firebaseDB.episodesRef
+        .where('animeId', '==', episodeData.animeId)
+        .get();
+      
+      const totalEpisodes = episodesSnapshot.size;
+      
+      // 3. Actualizar el contador en el documento del anime
       await window.firebaseDB.animesRef.doc(episodeData.animeId).update({
-        totalEpisodes: episodes.length
+        totalEpisodes: totalEpisodes
       });
+      
+      console.log(`✅ Contador actualizado: ${totalEpisodes} episodios`);
       
       return { success: true, id: docRef.id };
     } catch (error) {
+      console.error('❌ Error al agregar episodio:', error);
+      console.error('Detalles completos:', error);
       return { success: false, error };
     }
   },
 
   deleteEpisode: async (episodeId, animeId) => {
     try {
+      console.log('🗑️ Eliminando episodio:', episodeId);
+      
+      // 1. Eliminar el episodio
       await window.firebaseDB.episodesRef.doc(episodeId).delete();
       
-      // Recalcular totalEpisodes
-      const episodes = await window.firebaseService.getEpisodesByAnime(animeId);
+      console.log('✅ Episodio eliminado');
+      
+      // 2. Recalcular total de episodios
+      const episodesSnapshot = await window.firebaseDB.episodesRef
+        .where('animeId', '==', animeId)
+        .get();
+      
+      const totalEpisodes = episodesSnapshot.size;
+      
+      // 3. Actualizar contador en el anime
       await window.firebaseDB.animesRef.doc(animeId).update({
-        totalEpisodes: episodes.length
+        totalEpisodes: totalEpisodes
       });
+      
+      console.log(`✅ Contador actualizado: ${totalEpisodes} episodios`);
       
       return { success: true };
     } catch (error) {
+      console.error('❌ Error al eliminar episodio:', error);
       return { success: false, error };
     }
   }
 };
+
+console.log('🔥 Firebase Service cargado correctamente');
