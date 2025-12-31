@@ -31,20 +31,23 @@ const loadSeasonsFromFirebase = async () => {
       summer: 'summer'
     };
     
-    // Mapeo de IDs para links
-    const seasonLinks = {
-      fall: 'fall-2025.html',
-      winter: 'winter-2025.html',
-      spring: 'spring-2025.html',
-      summer: 'summer-2025.html'
-    };
+    // Para cada temporada, contar sus animes
+    const seasonsWithCounts = await Promise.all(
+      seasons.map(async (season) => {
+        const animes = await window.firebaseService.getAnimesBySeason(season.id);
+        return {
+          ...season,
+          animeCount: animes.length // Contador real de animes
+        };
+      })
+    );
     
-// Renderizar temporadas
-    seasonsGrid.innerHTML = seasons.map(season => {
+    console.log('📊 Temporadas con contadores:', seasonsWithCounts);
+    
+    // Renderizar temporadas
+    seasonsGrid.innerHTML = seasonsWithCounts.map(season => {
       const seasonKey = season.id.split('_')[0]; 
       const seasonClass = seasonClasses[seasonKey] || 'fall';
-      
-      // 1. Esta es la variable que construimos usando el campo 'period' de Firebase
       const seasonPage = `pages/${season.period}.html`; 
       
       return `
@@ -54,7 +57,7 @@ const loadSeasonsFromFirebase = async () => {
             <h3 class="season-name">${season.name}</h3>
             <p class="season-period">${season.period}</p>
             <div class="season-stats">
-              <span class="anime-count">${season.animeCount || 0}+ Animes</span>
+              <span class="anime-count">${season.animeCount} Animes</span>
               <span class="status-badge ${season.status === 'active' ? 'active' : 'completed'}">
                 ${season.status === 'active' ? 'Activo' : 'Finalizado'}
               </span>
@@ -72,10 +75,49 @@ const loadSeasonsFromFirebase = async () => {
       `;
     }).join('');
     
+    // Actualizar estadísticas globales
+    updateGlobalStats(seasonsWithCounts);
+    
   } catch (error) {
     console.error('Error al cargar temporadas:', error);
     seasonsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #ef4444; padding: 3rem;">❌ Error al cargar temporadas</p>';
   }
+};
+
+// ============================================
+// ACTUALIZAR ESTADÍSTICAS GLOBALES
+// ============================================
+const updateGlobalStats = (seasons) => {
+  // Contar total de temporadas
+  const totalSeasons = seasons.length;
+  
+  // Contar total de animes (sumando todos)
+  const totalAnimes = seasons.reduce((sum, season) => sum + season.animeCount, 0);
+  
+  console.log(`📈 Estadísticas: ${totalSeasons} temporadas, ${totalAnimes} animes`);
+  
+  // Actualizar en el DOM
+  const seasonsStatElement = document.querySelector('.stat-number[data-stat="seasons"]');
+  const animesStatElement = document.querySelector('.stat-number[data-stat="animes"]');
+  
+  if (seasonsStatElement) {
+    seasonsStatElement.textContent = totalSeasons + '+';
+  }
+  
+  if (animesStatElement) {
+    animesStatElement.textContent = totalAnimes + '+';
+  }
+  
+  // Si tienes otros contadores en la página, actualízalos aquí
+  const seasonCountElements = document.querySelectorAll('.season-count');
+  seasonCountElements.forEach(el => {
+    el.textContent = totalSeasons;
+  });
+  
+  const animeCountElements = document.querySelectorAll('.anime-count-total');
+  animeCountElements.forEach(el => {
+    el.textContent = totalAnimes;
+  });
 };
 
 // ============================================
@@ -89,6 +131,8 @@ function loadGlobalFavorites() {
   if (favCount) {
     favCount.textContent = favorites.length;
   }
+  
+  if (!favGrid) return;
   
   if (favorites.length === 0) {
     favGrid.innerHTML = '<p class="no-favorites">No tienes favoritos aún. ¡Explora las temporadas y agrega tus animes favoritos!</p>';
@@ -143,19 +187,22 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, observerOptions);
 
-document.querySelectorAll('.season-card').forEach(card => {
-  card.style.opacity = '0';
-  card.style.transform = 'translateY(30px)';
-  card.style.transition = 'all 0.6s ease-out';
-  observer.observe(card);
-});
+// Aplicar a elementos cuando se carguen
+const applyAnimations = () => {
+  document.querySelectorAll('.season-card').forEach(card => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(30px)';
+    card.style.transition = 'all 0.6s ease-out';
+    observer.observe(card);
+  });
 
-document.querySelectorAll('.about-card').forEach(card => {
-  card.style.opacity = '0';
-  card.style.transform = 'translateY(30px)';
-  card.style.transition = 'all 0.6s ease-out';
-  observer.observe(card);
-});
+  document.querySelectorAll('.about-card').forEach(card => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(30px)';
+    card.style.transition = 'all 0.6s ease-out';
+    observer.observe(card);
+  });
+};
 
 // ============================================
 // ACTUALIZAR NAVEGACIÓN AL HACER SCROLL
@@ -187,16 +234,22 @@ function animateStats() {
   const stats = document.querySelectorAll('.stat-number');
   
   stats.forEach(stat => {
-    const target = parseInt(stat.textContent);
+    const targetText = stat.textContent;
+    const target = parseInt(targetText);
+    
+    if (isNaN(target)) return;
+    
     let current = 0;
     const increment = target / 50;
+    const hasPlus = targetText.includes('+');
+    
     const timer = setInterval(() => {
       current += increment;
       if (current >= target) {
-        stat.textContent = target + (stat.id === 'favCount' ? '' : '+');
+        stat.textContent = target + (hasPlus ? '+' : '');
         clearInterval(timer);
       } else {
-        stat.textContent = Math.floor(current) + (stat.id === 'favCount' ? '' : '+');
+        stat.textContent = Math.floor(current) + (hasPlus ? '+' : '');
       }
     }, 30);
   });
@@ -217,24 +270,26 @@ window.addEventListener('scroll', () => {
 // ============================================
 // AGREGAR RIPPLE EFFECT A BOTONES
 // ============================================
-document.querySelectorAll('.season-btn').forEach(button => {
-  button.addEventListener('click', function(e) {
-    const ripple = document.createElement('span');
-    const rect = this.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
-    const x = e.clientX - rect.left - size / 2;
-    const y = e.clientY - rect.top - size / 2;
-    
-    ripple.style.width = ripple.style.height = size + 'px';
-    ripple.style.left = x + 'px';
-    ripple.style.top = y + 'px';
-    ripple.classList.add('ripple');
-    
-    this.appendChild(ripple);
-    
-    setTimeout(() => ripple.remove(), 600);
+const addRippleEffect = () => {
+  document.querySelectorAll('.season-btn').forEach(button => {
+    button.addEventListener('click', function(e) {
+      const ripple = document.createElement('span');
+      const rect = this.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const x = e.clientX - rect.left - size / 2;
+      const y = e.clientY - rect.top - size / 2;
+      
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = x + 'px';
+      ripple.style.top = y + 'px';
+      ripple.classList.add('ripple');
+      
+      this.appendChild(ripple);
+      
+      setTimeout(() => ripple.remove(), 600);
+    });
   });
-});
+};
 
 const style = document.createElement('style');
 style.textContent = `
@@ -285,8 +340,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Esperar a que Firebase esté listo
   if (window.firebaseService) {
-    // Cargar temporadas desde Firebase
+    // Cargar temporadas desde Firebase (esto actualiza los contadores)
     await loadSeasonsFromFirebase();
+    
+    // Aplicar animaciones después de cargar
+    setTimeout(() => {
+      applyAnimations();
+      addRippleEffect();
+    }, 100);
   } else {
     console.error('❌ Firebase Service no está disponible');
   }
@@ -294,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Cargar favoritos desde localStorage
   loadGlobalFavorites();
   
-  // Animar estadísticas
+  // Animar estadísticas después de 500ms
   setTimeout(() => {
     animateStats();
   }, 500);
