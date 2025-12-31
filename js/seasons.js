@@ -51,77 +51,111 @@ const loadSeasonAnimes = async () => {
     }
 };
 
+// ============================================
+// RENDERIZAR ANIMES AGRUPADOS POR CATEGORÍA
+// ============================================
 const renderSeasonAnimes = (animes) => {
     if (!animes || animes.length === 0) {
         animeContainer.innerHTML = `<p style="text-align:center; color:#48cae480; padding:3rem;">No hay animes registrados para esta temporada aún.</p>`;
         return;
     }
 
+    // Separar animes por categoría
+    const continuaciones = animes.filter(anime => anime.category === 'continuation');
+    const nuevos = animes.filter(anime => anime.category === 'new');
+
+    // Limpiar contenedor
     animeContainer.innerHTML = '';
 
-    animes.forEach(anime => {
-        const article = document.createElement('article');
-        article.className = 'anime-card';
-        article.id = anime.id;
-        article.setAttribute('data-title', anime.title);
+    // SECCIÓN: CONTINUACIONES
+    if (continuaciones.length > 0) {
+        const seccionContinuaciones = document.createElement('h2');
+        seccionContinuaciones.className = 'section-title';
+        seccionContinuaciones.innerHTML = '⭐ Continuaciones ⭐';
+        animeContainer.appendChild(seccionContinuaciones);
 
-const trailersHtml = (anime.trailers || [])
-    .map(url => {
-        if (url.includes('/shorts/')) return '';
+        continuaciones.forEach(anime => {
+            animeContainer.appendChild(createAnimeCard(anime));
+        });
+    }
 
-        const finalEmbedUrl = getYouTubeEmbedUrl(url);
-        if (!finalEmbedUrl) return '';
+    // SECCIÓN: NUEVOS ESTRENOS
+    if (nuevos.length > 0) {
+        const seccionNuevos = document.createElement('h2');
+        seccionNuevos.className = 'section-title';
+        seccionNuevos.innerHTML = '🆕 Nuevos Estrenos 🆕';
+        animeContainer.appendChild(seccionNuevos);
 
-        return `
-        <div class="video-container">
-            <iframe
-                src="${finalEmbedUrl}"
-                title="Trailer de ${anime.title}"
-                frameborder="0"
-                referrerpolicy="strict-origin-when-cross-origin"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-                loading="lazy">
-            </iframe>
-        </div>`;
-    })
-    .filter(Boolean)
-    .join('') || '<p class="no-trailers">No hay trailers disponibles</p>';
+        nuevos.forEach(anime => {
+            animeContainer.appendChild(createAnimeCard(anime));
+        });
+    }
 
-
-
-        article.innerHTML = `
-            <div class="carousel">
-                <div class="carousel-container">
-                    <div class="carousel-images">
-                        <img src="${anime.cardImage}" alt="${anime.title} 1">
-                        <img src="${anime.poster}" alt="${anime.title} 2">
-                    </div>
-                    <button class="prev">❮</button>
-                    <button class="next">❯</button>
-                </div>
-            </div>
-            <div class="details">
-                <p><strong>Título:</strong> ${anime.title}</p>
-                <p><strong>Sinopsis:</strong> ${anime.synopsis || 'Sin descripción disponible.'}</p>
-                <button class="fav-btn" data-id="${anime.id}">Agregar a Favoritos</button>
-                <div class="trailers">
-                    ${trailersHtml}
-                </div>
-                <div style="margin-top: 1rem; text-align: center;">
-                    <a href="anime-details.html?id=${anime.id}" class="btn-primary" style="text-decoration: none; padding: 10px 20px; background: #48cae4; color: #000; border-radius: 5px; font-weight: bold; display: block;">
-                        🎬 Ver Episodios
-                    </a>
-                </div>
-            </div>
-        `;
-        animeContainer.appendChild(article);
-    });
-
-    // RE-INICIALIZAR LOGICA DINÁMICA
+    // RE-INICIALIZAR LÓGICA DINÁMICA
     initCarousels();
     initFavoritesLogic();
     syncSearchCards();
+};
+
+// ============================================
+// FUNCIÓN AUXILIAR: CREAR TARJETA DE ANIME
+// ============================================
+const createAnimeCard = (anime) => {
+    const article = document.createElement('article');
+    article.className = 'anime-card';
+    article.id = anime.id;
+    article.setAttribute('data-title', anime.title);
+
+    const trailersHtml = (anime.trailers || [])
+        .map(url => {
+            if (url.includes('/shorts/')) return '';
+
+            const finalEmbedUrl = getYouTubeEmbedUrl(url);
+            if (!finalEmbedUrl) return '';
+
+            return `
+            <div class="video-container">
+                <iframe
+                    src="${finalEmbedUrl}"
+                    title="Trailer de ${anime.title}"
+                    frameborder="0"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                    loading="lazy">
+                </iframe>
+            </div>`;
+        })
+        .filter(Boolean)
+        .join('') || '<p class="no-trailers">No hay trailers disponibles</p>';
+
+    article.innerHTML = `
+        <div class="carousel">
+            <div class="carousel-container">
+                <div class="carousel-images">
+                    <img src="${anime.cardImage}" alt="${anime.title} 1">
+                    <img src="${anime.poster}" alt="${anime.title} 2">
+                </div>
+                <button class="prev">❮</button>
+                <button class="next">❯</button>
+            </div>
+        </div>
+        <div class="details">
+            <p><strong>Título:</strong> ${anime.title}</p>
+            <p><strong>Sinopsis:</strong> ${anime.synopsis || 'Sin descripción disponible.'}</p>
+            <button class="fav-btn" data-id="${anime.id}">Agregar a Favoritos</button>
+            <div class="trailers">
+                ${trailersHtml}
+            </div>
+            <div style="margin-top: 1rem; text-align: center;">
+                <a href="anime-details.html?id=${anime.id}" class="btn-primary" style="text-decoration: none; padding: 10px 20px; background: #48cae4; color: #000; border-radius: 5px; font-weight: bold; display: block;">
+                    🎬 Ver Episodios
+                </a>
+            </div>
+        </div>
+    `;
+
+    return article;
 };
 
 // ============================================
@@ -210,7 +244,7 @@ const renderFavoritesList = () => {
     }
 };
 
-// 3. BÚSQUEDA
+// 3. BÚSQUEDA (MEJORADA PARA SECCIONES)
 let currentAnimeCards = [];
 const syncSearchCards = () => {
     currentAnimeCards = document.querySelectorAll('.anime-card');
@@ -221,6 +255,7 @@ searchBar?.addEventListener('input', () => {
     const query = searchBar.value.toLowerCase().trim();
     let hasResults = false;
 
+    // Filtrar tarjetas
     currentAnimeCards.forEach(card => {
         const title = card.dataset.title.toLowerCase();
         if (title.includes(query)) {
@@ -231,7 +266,24 @@ searchBar?.addEventListener('input', () => {
         }
     });
     
-    // Opcional: Podrías añadir lógica aquí para mostrar un mensaje si hasResults es false
+    // Ocultar títulos de sección si no hay resultados en esa categoría
+    const sectionTitles = document.querySelectorAll('.section-title');
+    sectionTitles.forEach(title => {
+        const nextCards = [];
+        let sibling = title.nextElementSibling;
+        
+        // Recopilar todas las tarjetas después del título hasta el próximo título
+        while (sibling && !sibling.classList.contains('section-title')) {
+            if (sibling.classList.contains('anime-card')) {
+                nextCards.push(sibling);
+            }
+            sibling = sibling.nextElementSibling;
+        }
+        
+        // Mostrar título solo si hay tarjetas visibles
+        const hasVisibleCards = nextCards.some(card => card.style.display !== 'none');
+        title.style.display = hasVisibleCards ? '' : 'none';
+    });
 });
 
 // 4. DARK MODE
