@@ -1,7 +1,6 @@
 /* ============================================
    ANIME TEMPORADAS - JAVASCRIPT (DINÁMICO)
    Autor: Jaykai2
-   Funcionalidades: Firebase, Carousel, Favoritos, Búsqueda, Dark Mode
    ============================================ */
 
 // 1. CONFIGURACIÓN Y SERVICIOS

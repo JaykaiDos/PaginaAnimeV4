@@ -1,7 +1,6 @@
 /* ============================================
-   ANIME HUB - JAVASCRIPT PRINCIPAL (MODIFICADO)
+   ANIME HUB - JAVASCRIPT PRINCIPAL
    Autor: Jaykai2
-   AHORA LEE DESDE FIREBASE
    ============================================ */
 
 // ============================================

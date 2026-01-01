@@ -1,7 +1,6 @@
 /* ============================================
-   WATCH PAGE - JAVASCRIPT (MODIFICADO)
+   WATCH PAGE - JAVASCRIPT
    Autor: Jaykai2
-   AHORA LEE DESDE FIREBASE
    ============================================ */
 
 // Estado de la aplicación

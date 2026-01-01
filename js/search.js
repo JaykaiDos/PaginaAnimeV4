@@ -1,7 +1,6 @@
 /* ============================================
-   ANIME SEARCH - JAVASCRIPT (MODIFICADO)
+   ANIME SEARCH - JAVASCRIPT
    Autor: Jaykai2
-   AHORA LEE DESDE FIREBASE
    ============================================ */
 
 // Estado de la aplicación

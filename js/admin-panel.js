@@ -1,6 +1,6 @@
 /* ============================================
-   ADMIN PANEL LOGIC
-   Archivo: js/admin-panel.js
+   ADMIN PANEL LOGICO - JAVASCRIPT
+   Autor: Jaykai2
    ============================================ */
 
 const { 

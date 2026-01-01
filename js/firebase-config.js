@@ -1,18 +1,7 @@
 /* ============================================
-   FIREBASE CONFIGURATION
-   Archivo: js/firebase-config.js
+   FIREBASE Configuracion - Inicialización
+   Author: Jaykai2
    ============================================ */
-
-// Importar Firebase desde CDN (agregar en HTML antes de este script)
-// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-
-// ============================================
-// CONFIGURACIÓN DE TU PROYECTO FIREBASE
-// ============================================
-// ⚠️ IMPORTANTE: Reemplaza estos valores con los de tu proyecto
-// Los obtienes en: Firebase Console → Project Settings → Your apps → Web app
 
 const firebaseConfig = {
   apiKey: "AIzaSyDen1wLGz-ZN-9RO2-By18EXtyz8zuoR6k",

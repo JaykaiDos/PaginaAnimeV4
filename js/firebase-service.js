@@ -1,14 +1,7 @@
 /* ============================================
-   FIREBASE SERVICE - CRUD OPERATIONS
-   Archivo: js/firebase-service.js
+   FIREBASE SERVICIOS - CRUD OPERATIONS
+   Author: Jaykai2
    ============================================ */
-
-/**
- * NOTA PARA PROGRAMADOR: 
- * No declaramos 'const seasonsRef' aquí arriba porque ya existen en el objeto 
- * global window.firebaseDB definido en firebase-config.js. 
- * Accederemos a ellas directamente desde el objeto global.
- */
 
 window.firebaseService = {
   // ============================================

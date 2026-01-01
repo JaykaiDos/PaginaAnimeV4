@@ -1,7 +1,6 @@
 /* ============================================
-   ANIME DETAILS - JAVASCRIPT (MODIFICADO)
+   ANIME DETAILS - JAVASCRIPT
    Autor: Jaykai2
-   AHORA LEE DESDE FIREBASE
    ============================================ */
 
 // Estado de la aplicación
