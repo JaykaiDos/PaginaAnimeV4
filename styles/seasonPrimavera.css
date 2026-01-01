@@ -1,7 +1,7 @@
 /* ============================================
-   ANIME PRIMAVERA 2025 - ESTILOS MATRIX/NEON
+   ANIME PRIMAVERA 2025 - ESTILOS FLORALES/NEON
    Autor: Jaykai2
-   Paleta inspirada en colores primaverales
+   Paleta inspirada en colores primaverales (rosa, lila, verde claro)
    ============================================ */
 
 /* === RESET Y BASE === */
@@ -13,11 +13,11 @@
 
 body {
   font-family: 'Roboto Mono', monospace;
-  background-color: #0f172a;
+  background-color: #1a0a2e;
   background-image: 
-    radial-gradient(circle at 25% 30%, #1e293b 0%, transparent 40%),
-    radial-gradient(circle at 75% 70%, #0f172a 0%, transparent 40%);
-  color: #d4f1d4;
+    radial-gradient(circle at 25% 30%, #2d1b4e 0%, transparent 40%),
+    radial-gradient(circle at 75% 70%, #1a0a2e 0%, transparent 40%);
+  color: #f8b4d9;
   line-height: 1.6;
   min-height: 100vh;
 }
@@ -26,15 +26,15 @@ body {
 header {
   text-align: center;
   padding: 3rem 1rem;
-  border-bottom: 2px solid #86efac40;
+  border-bottom: 2px solid #ec4899;
   position: relative;
 }
 
 h1 {
   font-size: 3rem;
   font-weight: 700;
-  color: #d4f1f4;
-  text-shadow: 0 0 10px #86efac, 0 0 20px #4ade80, 0 0 30px #22c55e, 0 0 40px #16a34a;
+  color: #f9a8d4;
+  text-shadow: 0 0 10px #ec4899, 0 0 20px #ec4899, 0 0 30px #db2777;
   margin-bottom: 1rem;
   letter-spacing: 0.1em;
   animation: glow 2s ease-in-out infinite alternate;
@@ -42,10 +42,10 @@ h1 {
 
 @keyframes glow {
   from {
-    text-shadow: 0 0 10px #86efac, 0 0 20px #4ade80, 0 0 30px #22c55e, 0 0 40px #16a34a;
+    text-shadow: 0 0 10px #ec4899, 0 0 20px #ec4899, 0 0 30px #db2777;
   }
   to {
-    text-shadow: 0 0 15px #86efac, 0 0 30px #4ade80, 0 0 45px #22c55e, 0 0 60px #16a34a;
+    text-shadow: 0 0 15px #ec4899, 0 0 30px #db2777, 0 0 45px #be185d;
   }
 }
 
@@ -70,29 +70,29 @@ h1 {
   padding: 0.8rem 1.2rem;
   font-size: 1rem;
   font-family: 'Roboto Mono', monospace;
-  background-color: rgba(15, 23, 42, 0.7);
-  border: 2px solid #86efac80;
+  background-color: rgba(26, 10, 46, 0.7);
+  border: 2px solid #ec489980;
   border-radius: 8px;
-  color: #d4f1d4;
+  color: #f8b4d9;
   transition: all 0.3s ease;
 }
 
 #searchBar:focus {
   outline: none;
-  border-color: #86efac;
-  box-shadow: 0 0 20px #86efac80, 0 0 30px #4ade8040;
+  border-color: #ec4899;
+  box-shadow: 0 0 15px #ec489980;
 }
 
 #searchBar::placeholder {
-  color: #86efac80;
+  color: #ec489980;
 }
 
 #darkModeToggle {
   padding: 0.8rem 1.5rem;
-  background-color: rgba(134, 239, 172, 0.1);
-  border: 2px solid #86efac;
+  background-color: rgba(236, 72, 153, 0.1);
+  border: 2px solid #ec4899;
   border-radius: 8px;
-  color: #d4f1d4;
+  color: #f8b4d9;
   font-family: 'Roboto Mono', monospace;
   font-weight: 700;
   cursor: pointer;
@@ -102,9 +102,9 @@ h1 {
 }
 
 #darkModeToggle:hover {
-  background-color: #86efac;
-  color: #0f172a;
-  box-shadow: 0 0 20px #86efac, 0 0 30px #4ade80;
+  background-color: #ec4899;
+  color: #1a0a2e;
+  box-shadow: 0 0 15px #ec4899;
   transform: translateY(-2px);
 }
 
@@ -119,21 +119,21 @@ h1 {
 .section-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #fbbf24;
-  text-shadow: 0 0 15px #fcd34d, 0 0 25px #fbbf24, 0 0 35px #f59e0b;
+  color: #c084fc;
+  text-shadow: 0 0 10px #a855f7, 0 0 20px #9333ea;
   text-align: center;
   margin: 3rem 0 2rem;
   padding: 1rem;
-  border-top: 2px solid #fcd34d40;
-  border-bottom: 2px solid #fcd34d40;
+  border-top: 2px solid #c084fc40;
+  border-bottom: 2px solid #c084fc40;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 /* === ANIME CARDS === */
 .anime-card {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%);
-  border: 2px solid #86efac60;
+  background: linear-gradient(135deg, rgba(26, 10, 46, 0.9) 0%, rgba(45, 27, 78, 0.7) 100%);
+  border: 2px solid #ec489960;
   border-radius: 16px;
   padding: 2rem;
   margin-bottom: 3rem;
@@ -142,12 +142,12 @@ h1 {
   gap: 2.5rem;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(134, 239, 172, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .anime-card:hover {
-  border-color: #86efac;
-  box-shadow: 0 0 40px #86efac80, 0 0 60px #4ade8040, 0 12px 40px rgba(0, 0, 0, 0.7);
+  border-color: #ec4899;
+  box-shadow: 0 0 30px #ec489980, 0 12px 40px rgba(0, 0, 0, 0.7);
   transform: translateY(-8px);
 }
 
@@ -158,8 +158,8 @@ h1 {
   height: 550px;
   overflow: hidden;
   border-radius: 16px;
-  border: 3px solid #86efac;
-  box-shadow: 0 8px 24px rgba(134, 239, 172, 0.4), 0 0 40px rgba(74, 222, 128, 0.2);
+  border: 3px solid #ec4899;
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.3);
 }
 
 .carousel-title {
@@ -173,8 +173,8 @@ h1 {
   font-size: 1.3rem;
   text-align: center;
   z-index: 10;
-  color: #d4f1f4;
-  text-shadow: 0 0 15px #000, 0 0 30px #86efac, 0 0 40px #4ade80;
+  color: #f9a8d4;
+  text-shadow: 0 0 15px #000, 0 0 30px #ec4899;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -196,7 +196,7 @@ h1 {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(134, 239, 172, 0.8);
+  background: rgba(236, 72, 153, 0.8);
   border: none;
   color: white;
   font-size: 2rem;
@@ -214,8 +214,8 @@ h1 {
 }
 
 .carousel-btn:hover {
-  background: #86efac;
-  box-shadow: 0 0 25px #86efac, 0 0 40px #4ade80;
+  background: #ec4899;
+  box-shadow: 0 0 15px #ec4899;
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -230,7 +230,7 @@ h1 {
   background: rgba(0, 0, 0, 0.3);
   padding: 1.5rem;
   border-radius: 12px;
-  border: 1px solid #86efac20;
+  border: 1px solid #ec489920;
 }
 
 .details p {
@@ -240,8 +240,8 @@ h1 {
 }
 
 .details strong {
-  color: #fcd34d;
-  text-shadow: 0 0 10px #fbbf24, 0 0 15px #f59e0b;
+  color: #c084fc;
+  text-shadow: 0 0 8px #a855f7;
   font-size: 1.1rem;
   display: inline-block;
   margin-right: 0.5rem;
@@ -251,10 +251,10 @@ h1 {
 .fav-btn {
   align-self: flex-start;
   padding: 0.8rem 1.5rem;
-  background-color: rgba(252, 211, 77, 0.1);
-  border: 2px solid #fcd34d;
+  background-color: rgba(192, 132, 252, 0.1);
+  border: 2px solid #c084fc;
   border-radius: 8px;
-  color: #fcd34d;
+  color: #c084fc;
   font-family: 'Roboto Mono', monospace;
   font-weight: 700;
   cursor: pointer;
@@ -264,17 +264,16 @@ h1 {
 }
 
 .fav-btn:hover {
-  background-color: #fcd34d;
-  color: #0f172a;
-  box-shadow: 0 0 20px #fcd34d, 0 0 30px #fbbf24;
+  background-color: #c084fc;
+  color: #1a0a2e;
+  box-shadow: 0 0 15px #c084fc;
   transform: translateY(-2px);
 }
 
 .fav-btn.active {
-  background-color: #fbbf24;
-  border-color: #fbbf24;
-  color: #0f172a;
-  box-shadow: 0 0 20px #fbbf24;
+  background-color: #a855f7;
+  border-color: #a855f7;
+  color: #1a0a2e;
 }
 
 /* === TRAILERS === */
@@ -286,7 +285,7 @@ h1 {
   padding: 1.5rem;
   background-color: rgba(0, 0, 0, 0.6);
   border-radius: 12px;
-  border: 1px solid #86efac40;
+  border: 1px solid #ec489940;
 }
 
 .trailers::before {
@@ -294,16 +293,15 @@ h1 {
   position: absolute;
   top: -0.5rem;
   left: 1rem;
-  background: #0f172a;
+  background: #1a0a2e;
   padding: 0.3rem 1rem;
-  color: #fcd34d;
+  color: #c084fc;
   font-weight: 700;
   font-size: 0.9rem;
   border-radius: 4px;
-  border: 1px solid #fcd34d40;
+  border: 1px solid #c084fc40;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  text-shadow: 0 0 10px #fbbf24;
 }
 
 .trailers {
@@ -314,22 +312,22 @@ iframe {
   width: 100%;
   height: 280px;
   border-radius: 12px;
-  border: 3px solid #86efac;
+  border: 3px solid #ec4899;
   transition: all 0.3s ease;
   background: #000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 15px rgba(134, 239, 172, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 iframe:hover {
-  border-color: #fcd34d;
-  box-shadow: 0 0 30px #86efac, 0 0 50px #4ade8080;
+  border-color: #c084fc;
+  box-shadow: 0 0 25px #ec4899, 0 0 40px #db277780;
   transform: scale(1.02);
 }
 
 /* === FAVORITES SECTION === */
 .favorites {
-  background-color: rgba(15, 23, 42, 0.8);
-  border: 2px solid #f9a8d450;
+  background-color: rgba(26, 10, 46, 0.8);
+  border: 2px solid #ec489950;
   border-radius: 12px;
   padding: 2rem;
   margin: 3rem 1rem;
@@ -337,8 +335,8 @@ iframe:hover {
 }
 
 .favorites h2 {
-  color: #fbcfe8;
-  text-shadow: 0 0 15px #f9a8d4, 0 0 25px #f472b6;
+  color: #f9a8d4;
+  text-shadow: 0 0 10px #ec4899;
   margin-bottom: 1.5rem;
   font-size: 1.8rem;
   letter-spacing: 0.1em;
@@ -346,10 +344,10 @@ iframe:hover {
 
 #clearFavoritesBtn {
   padding: 0.8rem 1.5rem;
-  background-color: rgba(249, 168, 212, 0.1);
-  border: 2px solid #f9a8d4;
+  background-color: rgba(236, 72, 153, 0.1);
+  border: 2px solid #ec4899;
   border-radius: 8px;
-  color: #f9a8d4;
+  color: #ec4899;
   font-family: 'Roboto Mono', monospace;
   font-weight: 700;
   cursor: pointer;
@@ -359,48 +357,47 @@ iframe:hover {
 }
 
 #clearFavoritesBtn:hover {
-  background-color: #f9a8d4;
-  color: #0f172a;
-  box-shadow: 0 0 20px #f9a8d4, 0 0 30px #f472b6;
+  background-color: #ec4899;
+  color: #1a0a2e;
+  box-shadow: 0 0 15px #ec4899;
 }
 
 .fav-list {
-  color: #d4f1d4;
+  color: #f8b4d9;
   font-size: 1.1rem;
   list-style: none;
   padding: 0;
 }
 
 .fav-list.none {
-  color: #86efac80;
+  color: #ec489980;
   font-style: italic;
 }
 
 .fav-list li {
   padding: 0.8rem;
-  border-bottom: 1px solid #86efac20;
+  border-bottom: 1px solid #ec489920;
   transition: all 0.3s ease;
 }
 
 .fav-list li:hover {
-  background-color: rgba(134, 239, 172, 0.1);
+  background-color: rgba(236, 72, 153, 0.1);
   padding-left: 1.2rem;
-  box-shadow: 0 0 10px rgba(134, 239, 172, 0.2);
 }
 
 /* === FOOTER === */
 footer {
   text-align: center;
   padding: 2rem;
-  border-top: 2px solid #86efac40;
+  border-top: 2px solid #ec489940;
   margin-top: 3rem;
-  color: #86efac;
+  color: #ec4899;
 }
 
 footer .credit {
   font-size: 1.2rem;
-  color: #fcd34d;
-  text-shadow: 0 0 15px #fbbf24, 0 0 25px #f59e0b;
+  color: #c084fc;
+  text-shadow: 0 0 10px #a855f7;
   margin-bottom: 0.5rem;
 }
 
@@ -412,19 +409,19 @@ footer p {
   display: inline-block;
   margin-top: 1rem;
   padding: 0.8rem 1.5rem;
-  background: rgba(134, 239, 172, 0.1);
-  border: 2px solid #86efac;
+  background: rgba(236, 72, 153, 0.1);
+  border: 2px solid #ec4899;
   border-radius: 25px;
-  color: #d4f1d4;
+  color: #f8b4d9;
   text-decoration: none;
   font-weight: 700;
   transition: all 0.3s ease;
 }
 
 .footer-link:hover {
-  background: #86efac;
-  color: #0f172a;
-  box-shadow: 0 0 25px #86efac, 0 0 35px #4ade80;
+  background: #ec4899;
+  color: #1a0a2e;
+  box-shadow: 0 0 20px #ec4899;
   transform: translateY(-2px);
 }
 
