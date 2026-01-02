@@ -163,6 +163,7 @@
 
   <!-- ============================================ -->
   <!-- MODAL: AGREGAR/EDITAR ANIME -->
+  <!-- ✅ MODIFICADO: Eliminado campo "TEMPORADA" redundante -->
   <!-- ============================================ -->
   <div class="modal" id="animeModal">
     <div class="modal-content modal-large">
@@ -172,26 +173,20 @@
       </div>
       
       <form id="animeForm">
-      <div class="form-group">
-  <label for="animeSeasonId">Vincular a Temporada *</label>
-  <select id="animeSeasonId" required>
-    <option value="">Cargando temporadas...</option>
-  </select>
-  <small>Esto determinará en qué página (Otoño, Invierno, etc.) aparecerá el anime.</small>
-</div>
+        <div class="form-group">
+          <label for="animeSeasonId">Vincular a Temporada *</label>
+          <select id="animeSeasonId" required>
+            <option value="">Cargando temporadas...</option>
+          </select>
+          <small>Esto determinará en qué página (Otoño, Invierno, etc.) aparecerá el anime.</small>
+        </div>
 
-<div class="form-group">
-  <label for="animeTitle">Título del Anime *</label>
-  <input type="text" id="animeTitle" placeholder="Ej: Solo Leveling" required>
-</div>
+        <div class="form-group">
+          <label for="animeTitle">Título del Anime *</label>
+          <input type="text" id="animeTitle" placeholder="Ej: Solo Leveling" required>
+        </div>
 
         <div class="form-row">
-          <div class="form-group">
-            <label for="animeSeason">Temporada *</label>
-            <select id="animeSeason" required>
-              <option value="">-- Selecciona --</option>
-            </select>
-          </div>
           <div class="form-group">
             <label for="animeCategory">Categoría *</label>
             <select id="animeCategory" required>
@@ -199,13 +194,13 @@
               <option value="new">🆕 Nuevo Estreno</option>
             </select>
           </div>
-        </div>
-
-        <div class="form-row">
           <div class="form-group">
             <label for="animeYear">Año</label>
             <input type="number" id="animeYear" value="2025" min="2000" max="2030">
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="animeStatus">Estado</label>
             <select id="animeStatus">
