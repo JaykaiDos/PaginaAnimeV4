@@ -4,7 +4,7 @@
    ============================================ */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAH4y1YBvB2wf8fHnHzO3XBwlyo3rFyVeg",
+  apiKey: "AIzaSyDen1wLGz-ZN-9RO2-By18EXtyz8zuoR6k",
   authDomain: "anime-hub-9e816.firebaseapp.com",
   projectId: "anime-hub-9e816",
   storageBucket: "anime-hub-9e816.firebasestorage.app",
