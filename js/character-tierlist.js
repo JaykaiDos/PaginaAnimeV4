@@ -1,7 +1,9 @@
 /* ============================================
    CHARACTER TIER LIST - MEJORADO
-   ✅ Con botones para mover sin arrastrar
-   ✅ Soporte para móvil
+   ✅ Personalización de colores de texto
+   ✅ Botones con primera letra
+   ✅ Textos largos con wrap correcto
+   ✅ Búsqueda de anime integrada
    ============================================ */
 
 // Estado de la aplicación
@@ -27,6 +29,18 @@ const characterCount = document.getElementById('characterCount');
 // Estado del filtro
 let selectedAnimeFilter = 'all';
 let selectedSeasonFilter = 'all';
+
+// ✅ PALETA DE COLORES PREDEFINIDOS
+const COLOR_PALETTE = [
+  { name: 'Rojo Neón', value: '#ff6b6b', shadow: '#ff6b6b' },
+  { name: 'Naranja', value: '#ffa94d', shadow: '#ffa94d' },
+  { name: 'Amarillo', value: '#ffd43b', shadow: '#ffd43b' },
+  { name: 'Verde Neón', value: '#51cf66', shadow: '#51cf66' },
+  { name: 'Cyan', value: '#48cae4', shadow: '#48cae4' },
+  { name: 'Azul', value: '#5c7cfa', shadow: '#5c7cfa' },
+  { name: 'Morado', value: '#cc5de8', shadow: '#cc5de8' },
+  { name: 'Rosa', value: '#ff6ac1', shadow: '#ff6ac1' }
+];
 
 // ============================================
 // INICIALIZACIÓN
@@ -116,11 +130,11 @@ const loadCharacters = async () => {
 // ============================================
 const initializeTiers = () => {
   const defaultTiers = [
-    { id: 'tier-S', name: 'S', color: '#ef4444' },
-    { id: 'tier-A', name: 'A', color: '#f97316' },
-    { id: 'tier-B', name: 'B', color: '#facc15' },
-    { id: 'tier-C', name: 'C', color: '#22c55e' },
-    { id: 'tier-D', name: 'D', color: '#3b82f6' }
+    { id: 'tier-S', name: 'S', color: '#fca5a5', bgColor: 'rgba(239, 68, 68, 0.3)' },
+    { id: 'tier-A', name: 'A', color: '#fdba74', bgColor: 'rgba(251, 146, 60, 0.3)' },
+    { id: 'tier-B', name: 'B', color: '#fde047', bgColor: 'rgba(250, 204, 21, 0.3)' },
+    { id: 'tier-C', name: 'C', color: '#86efac', bgColor: 'rgba(34, 197, 94, 0.3)' },
+    { id: 'tier-D', name: 'D', color: '#93c5fd', bgColor: 'rgba(59, 130, 246, 0.3)' }
   ];
   
   tiers = defaultTiers;
@@ -128,13 +142,17 @@ const initializeTiers = () => {
 };
 
 // ============================================
-// RENDERIZAR TIERS
+// ✅ RENDERIZAR TIERS CON COLORES PERSONALIZADOS
 // ============================================
 const renderTiers = () => {
   tiersArea.innerHTML = tiers.map(tier => `
     <div class="tier-row" data-tier="${tier.name}" data-tier-id="${tier.id}">
-      <div class="tier-label">
-        <div class="tier-name" onclick="editTierName('${tier.id}')">${tier.name}</div>
+      <div class="tier-label" style="background: linear-gradient(135deg, ${tier.bgColor || 'rgba(72, 202, 228, 0.2)'} 0%, rgba(0, 180, 216, 0.1) 100%);">
+        <div class="tier-name" 
+             onclick="openEditTierModal('${tier.id}')"
+             style="color: ${tier.color || '#fff'}; text-shadow: 0 0 15px ${tier.color || '#48cae4'}; word-wrap: break-word; word-break: break-word; line-height: 1.2; max-width: 100%; text-align: center;">
+          ${tier.name}
+        </div>
       </div>
       <div class="tier-items" data-tier-id="${tier.id}">
         <!-- Personajes se agregarán aquí -->
@@ -149,10 +167,127 @@ const renderTiers = () => {
 };
 
 // ============================================
+// ✅ ABRIR MODAL PARA EDITAR TIER
+// ============================================
+window.openEditTierModal = (tierId) => {
+  const tier = tiers.find(t => t.id === tierId);
+  if (!tier) return;
+  
+  const modal = document.createElement('div');
+  modal.className = 'tier-edit-modal';
+  modal.id = 'tierEditModal';
+  modal.innerHTML = `
+    <div class="tier-edit-modal-content">
+      <div class="tier-edit-header">
+        <h3>✏️ Editar Tier</h3>
+        <button class="btn-close-modal" onclick="closeTierEditModal()">✕</button>
+      </div>
+      
+      <div class="tier-edit-body">
+        <div class="form-group">
+          <label>Nombre de la Tier:</label>
+          <input type="text" id="tierNameInput" value="${tier.name}" maxlength="30" placeholder="Ej: Mejores Personajes 🎭">
+          <small>Máximo 30 caracteres</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Color del texto:</label>
+          <div class="color-palette">
+            ${COLOR_PALETTE.map(c => `
+              <div class="color-option ${tier.color === c.value ? 'selected' : ''}" 
+                   data-color="${c.value}" 
+                   data-shadow="${c.shadow}"
+                   onclick="selectTierColor('${c.value}', '${c.shadow}')"
+                   style="background: ${c.value};"
+                   title="${c.name}">
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+      
+      <div class="tier-edit-footer">
+        <button class="btn btn-secondary" onclick="closeTierEditModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveTierEdit('${tierId}')">💾 Guardar</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  setTimeout(() => modal.classList.add('show'), 10);
+  
+  window.tempTierColor = tier.color || '#fff';
+  window.tempTierShadow = tier.color || '#48cae4';
+};
+
+// ============================================
+// ✅ SELECCIONAR COLOR
+// ============================================
+window.selectTierColor = (color, shadow) => {
+  window.tempTierColor = color;
+  window.tempTierShadow = shadow;
+  
+  document.querySelectorAll('.color-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  
+  document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+};
+
+// ============================================
+// ✅ GUARDAR EDICIÓN DE TIER
+// ============================================
+window.saveTierEdit = (tierId) => {
+  const newName = document.getElementById('tierNameInput').value.trim();
+  
+  if (!newName) {
+    alert('⚠️ El nombre no puede estar vacío');
+    return;
+  }
+  
+  const tier = tiers.find(t => t.id === tierId);
+  if (!tier) return;
+  
+  tier.name = newName;
+  tier.color = window.tempTierColor || '#fff';
+  
+  const rgb = hexToRgb(tier.color);
+  tier.bgColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`;
+  
+  renderTiers();
+  saveTierListToStorage();
+  closeTierEditModal();
+  
+  console.log('✅ Tier actualizada:', tier.name);
+};
+
+// ============================================
+// ✅ CERRAR MODAL
+// ============================================
+window.closeTierEditModal = () => {
+  const modal = document.getElementById('tierEditModal');
+  if (modal) {
+    modal.classList.remove('show');
+    setTimeout(() => modal.remove(), 300);
+  }
+};
+
+// ============================================
+// ✅ HELPER: Convertir HEX a RGB
+// ============================================
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 72, g: 202, b: 228 };
+};
+
+// ============================================
 // ✅ SISTEMA DE BÚSQUEDA DE ANIME
 // ============================================
 const initAnimeSearch = () => {
-  // Evento de escritura en el input
   animeSearchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim().toLowerCase();
     
@@ -162,17 +297,15 @@ const initAnimeSearch = () => {
       return;
     }
     
-    // Filtrar animes que coincidan
     const matches = allAnimes.filter(anime => 
       anime.title.toLowerCase().includes(query)
-    ).slice(0, 10); // Máximo 10 resultados
+    ).slice(0, 10);
     
     if (matches.length === 0) {
       animeSearchResults.style.display = 'none';
       return;
     }
     
-    // Mostrar resultados
     animeSearchResults.innerHTML = matches.map(anime => `
       <div class="search-result-item" data-anime-id="${anime.id}" onclick="selectAnimeFromSearch('${anime.id}', '${anime.title.replace(/'/g, "\\'")}')">
         <img src="${anime.cardImage || anime.poster}" alt="${anime.title}">
@@ -183,7 +316,6 @@ const initAnimeSearch = () => {
     animeSearchResults.style.display = 'block';
   });
   
-  // Cerrar resultados al hacer click fuera
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.anime-search-container')) {
       animeSearchResults.style.display = 'none';
@@ -211,12 +343,10 @@ window.clearAnimeSearch = () => {
 const applyFilters = () => {
   let filteredCharacters = allCharacters;
   
-  // Filtro por anime específico
   if (selectedAnimeFilter !== 'all') {
     filteredCharacters = filteredCharacters.filter(char => char.animeId === selectedAnimeFilter);
   }
   
-  // Filtro por temporada
   if (selectedSeasonFilter !== 'all') {
     const animeIdsInSeason = allAnimes
       .filter(anime => anime.seasonId === selectedSeasonFilter)
@@ -227,7 +357,6 @@ const applyFilters = () => {
     );
   }
   
-  // Filtrar personajes que ya están en tiers
   const charactersInTiers = new Set();
   document.querySelectorAll('.tier-items .anime-card').forEach(card => {
     charactersInTiers.add(card.dataset.characterId);
@@ -235,7 +364,6 @@ const applyFilters = () => {
   
   filteredCharacters = filteredCharacters.filter(char => !charactersInTiers.has(char.id));
   
-  // Actualizar contador
   characterCount.textContent = `${filteredCharacters.length} personajes disponibles`;
   
   if (filteredCharacters.length === 0) {
@@ -248,7 +376,7 @@ const applyFilters = () => {
 };
 
 // ============================================
-// CREAR TARJETA DE PERSONAJE - MEJORADA
+// ✅ CREAR TARJETA DE PERSONAJE CON PRIMERA LETRA
 // ============================================
 const createCharacterCard = (character) => {
   const anime = allAnimes.find(a => a.id === character.animeId);
@@ -265,13 +393,16 @@ const createCharacterCard = (character) => {
       <div class="anime-card-title">${character.name}</div>
       ${!isMobile ? `
         <div class="anime-card-actions">
-          ${tiers.map(tier => `
-            <button class="quick-action-btn" 
-                    onclick="event.stopPropagation(); moveToTier('${character.id}', '${tier.id}')"
-                    title="Mover a ${tier.name}">
-              ${tier.name}
-            </button>
-          `).join('')}
+          ${tiers.map((tier, index) => {
+            const label = tier.name.charAt(0).toUpperCase();
+            return `
+              <button class="quick-action-btn" 
+                      onclick="event.stopPropagation(); moveToTier('${character.id}', '${tier.id}')"
+                      title="Mover a ${tier.name}">
+                ${label}
+              </button>
+            `;
+          }).join('')}
         </div>
       ` : ''}
     </div>
@@ -279,18 +410,43 @@ const createCharacterCard = (character) => {
 };
 
 // ============================================
-// ✅ SISTEMA DE SELECCIÓN PARA MÓVIL
+// MOVER PERSONAJE A TIER
+// ============================================
+window.moveToTier = (characterId, tierId) => {
+  const characterCard = document.querySelector(`[data-character-id="${characterId}"]`);
+  if (!characterCard) {
+    console.error('Personaje no encontrado:', characterId);
+    return;
+  }
+  
+  const tierContainer = document.querySelector(`.tier-items[data-tier-id="${tierId}"]`);
+  if (!tierContainer) {
+    console.error('Tier no encontrada:', tierId);
+    return;
+  }
+  
+  const actions = characterCard.querySelector('.anime-card-actions');
+  if (actions) actions.remove();
+  
+  tierContainer.appendChild(characterCard);
+  
+  applyFilters();
+  saveTierListToStorage();
+  
+  console.log(`✅ Personaje movido a tier ${tierId}`);
+};
+
+// ============================================
+// SISTEMA DE SELECCIÓN PARA MÓVIL
 // ============================================
 window.selectCharacter = (characterId) => {
   if (!isMobile) return;
   
-  // Deseleccionar anterior
   if (selectedCharacter) {
     const prevCard = document.querySelector(`[data-character-id="${selectedCharacter}"]`);
     if (prevCard) prevCard.classList.remove('selected');
   }
   
-  // Seleccionar nuevo
   if (selectedCharacter === characterId) {
     selectedCharacter = null;
     hideSelectionIndicator();
@@ -309,10 +465,11 @@ const showSelectionIndicator = () => {
     indicator.className = 'selection-mode-indicator';
     indicator.innerHTML = `
       <span>Selecciona una tier:</span>
-      ${tiers.map(tier => `
-        <button onclick="moveSelectedToTier('${tier.id}')">${tier.name}</button>
-      `).join('')}
-      <button onclick="cancelSelection()" style="background: #ef4444; color: #fff;">❌</button>
+      ${tiers.map(tier => {
+        const label = tier.name.charAt(0).toUpperCase();
+        return `<button onclick="moveSelectedToTier('${tier.id}')">${label}</button>`;
+      }).join('')}
+      <button onclick="cancelSelection()" style="background: #ef4444; color: #fff;">✕</button>
     `;
     document.body.appendChild(indicator);
   }
@@ -343,40 +500,10 @@ window.cancelSelection = () => {
 };
 
 // ============================================
-// ✅ MOVER PERSONAJE A TIER (SIN ARRASTRAR)
-// ============================================
-window.moveToTier = (characterId, tierId) => {
-  const characterCard = document.querySelector(`[data-character-id="${characterId}"]`);
-  if (!characterCard) {
-    console.error('Personaje no encontrado:', characterId);
-    return;
-  }
-  
-  const tierContainer = document.querySelector(`.tier-items[data-tier-id="${tierId}"]`);
-  if (!tierContainer) {
-    console.error('Tier no encontrada:', tierId);
-    return;
-  }
-  
-  // Remover botones de acción antes de mover
-  const actions = characterCard.querySelector('.anime-card-actions');
-  if (actions) actions.remove();
-  
-  // Mover a la tier
-  tierContainer.appendChild(characterCard);
-  
-  // Actualizar UI
-  applyFilters();
-  saveTierListToStorage();
-  
-  console.log(`✅ Personaje movido a tier ${tierId}`);
-};
-
-// ============================================
 // DRAG & DROP (SOLO DESKTOP)
 // ============================================
 const initDragAndDrop = () => {
-  if (isMobile) return; // No inicializar drag & drop en móvil
+  if (isMobile) return;
   
   const draggables = document.querySelectorAll('.anime-card');
   
@@ -422,7 +549,6 @@ const handleDrop = (e) => {
   
   if (!draggedElement) return;
   
-  // Remover botones de acción antes de mover
   const actions = draggedElement.querySelector('.anime-card-actions');
   if (actions) actions.remove();
   
@@ -430,27 +556,6 @@ const handleDrop = (e) => {
   
   applyFilters();
   saveTierListToStorage();
-};
-
-// ============================================
-// EDITAR NOMBRE DE TIER
-// ============================================
-window.editTierName = (tierId) => {
-  const tier = tiers.find(t => t.id === tierId);
-  if (!tier) return;
-  
-  const newName = prompt('Nuevo nombre para la tier:', tier.name);
-  
-  if (newName && newName.trim() !== '') {
-    tier.name = newName.trim();
-    
-    const tierRow = document.querySelector(`[data-tier-id="${tierId}"]`);
-    const tierNameElement = tierRow.querySelector('.tier-name');
-    tierNameElement.textContent = tier.name;
-    tierRow.dataset.tier = tier.name;
-    
-    saveTierListToStorage();
-  }
 };
 
 // ============================================
@@ -464,7 +569,8 @@ window.addNewTier = () => {
   const newTier = {
     id: `tier-${Date.now()}`,
     name: tierName.trim(),
-    color: '#48cae4'
+    color: '#48cae4',
+    bgColor: 'rgba(72, 202, 228, 0.3)'
   };
   
   tiers.push(newTier);
@@ -574,7 +680,6 @@ const loadTierListFromStorage = () => {
         tierState[tierId].forEach(characterId => {
           const characterCard = document.querySelector(`.anime-card[data-character-id="${characterId}"]`);
           if (characterCard) {
-            // Remover botones de acción antes de mover
             const actions = characterCard.querySelector('.anime-card-actions');
             if (actions) actions.remove();
             
@@ -583,7 +688,6 @@ const loadTierListFromStorage = () => {
         });
       });
       
-      // Actualizar pool después de mover personajes
       applyFilters();
       
       console.log('✅ Character Tier List cargado desde storage');
@@ -598,30 +702,103 @@ const loadTierListFromStorage = () => {
 // ============================================
 window.exportTierList = async () => {
   try {
+    let titleText = 'Personajes';
+    
+    if (selectedAnimeFilter !== 'all') {
+      const anime = allAnimes.find(a => a.id === selectedAnimeFilter);
+      titleText = anime ? anime.title : 'Personajes';
+    } else if (selectedSeasonFilter !== 'all') {
+      const seasonSelect = document.getElementById('seasonFilter');
+      const selectedOption = seasonSelect.options[seasonSelect.selectedIndex];
+      titleText = selectedOption.textContent;
+    } else {
+      titleText = 'Todos los Personajes';
+    }
+    
+    const titleHeader = document.createElement('div');
+    titleHeader.id = 'export-title-header';
+    titleHeader.style.cssText = `
+      background: linear-gradient(135deg, rgba(13, 2, 33, 0.95) 0%, rgba(38, 23, 94, 0.9) 100%);
+      border: 3px solid #48cae4;
+      border-radius: 16px 16px 0 0;
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: -2px;
+    `;
+    titleHeader.innerHTML = `
+      <h1 style="
+        font-family: 'Roboto Mono', monospace;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #caf0f8;
+        text-shadow: 0 0 15px #48cae4, 0 0 30px #00b4d8;
+        margin: 0;
+        letter-spacing: 0.1em;
+      ">🎭 TIER LIST DE PERSONAJES 🎭</h1>
+      <p style="
+        font-family: 'Roboto Mono', monospace;
+        font-size: 1.2rem;
+        color: #6ee7b7;
+        text-shadow: 0 0 10px #34d399;
+        margin: 0.5rem 0 0 0;
+        font-weight: 700;
+      ">${titleText}</p>
+    `;
+    
+    const tiersArea = document.getElementById('tiersArea');
+    tiersArea.parentNode.insertBefore(titleHeader, tiersArea);
+    
+    const exportContainer = document.createElement('div');
+    exportContainer.style.cssText = `
+      background: #0d0221;
+      padding: 2rem;
+      border-radius: 16px;
+    `;
+    exportContainer.appendChild(titleHeader.cloneNode(true));
+    exportContainer.appendChild(tiersArea.cloneNode(true));
+    
+    exportContainer.style.position = 'absolute';
+    exportContainer.style.left = '-9999px';
+    document.body.appendChild(exportContainer);
+    
     document.querySelectorAll('.tier-actions').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.anime-card-actions').forEach(el => el.style.display = 'none');
+    exportContainer.querySelectorAll('.tier-actions').forEach(el => el.style.display = 'none');
+    exportContainer.querySelectorAll('.anime-card-actions').forEach(el => el.style.display = 'none');
     
-    const element = tiersArea;
-    
-    const canvas = await html2canvas(element, {
+    const canvas = await html2canvas(exportContainer, {
       backgroundColor: '#0d0221',
       scale: 2,
       logging: false,
-      useCORS: true
+      useCORS: true,
+      width: exportContainer.scrollWidth,
+      height: exportContainer.scrollHeight
     });
     
     document.querySelectorAll('.tier-actions').forEach(el => el.style.display = '');
     document.querySelectorAll('.anime-card-actions').forEach(el => el.style.display = '');
     
+    document.body.removeChild(exportContainer);
+    titleHeader.remove();
+    
     const link = document.createElement('a');
-    link.download = `character-tierlist-${Date.now()}.png`;
-    link.href = canvas.toDataURL();
+    const timestamp = new Date().toISOString().slice(0,10);
+    const filename = `character-tierlist-${titleText.replace(/\s+/g, '-').toLowerCase()}-${timestamp}.png`;
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
     link.click();
     
-    console.log('📸 Character Tier List exportado como imagen');
+    console.log('📸 Character Tier List exportado con título:', titleText);
+    
   } catch (error) {
     console.error('❌ Error al exportar:', error);
     alert('❌ Error al exportar imagen. Intenta nuevamente.');
+    
+    const titleHeader = document.getElementById('export-title-header');
+    if (titleHeader) titleHeader.remove();
+    
+    document.querySelectorAll('.tier-actions').forEach(el => el.style.display = '');
+    document.querySelectorAll('.anime-card-actions').forEach(el => el.style.display = '');
   }
 };
 
@@ -629,7 +806,6 @@ window.exportTierList = async () => {
 // EVENT LISTENERS
 // ============================================
 const initEventListeners = () => {
-  // Filtro de temporada
   seasonFilter.addEventListener('change', (e) => {
     selectedSeasonFilter = e.target.value;
     applyFilters();
@@ -643,9 +819,9 @@ const initEventListeners = () => {
 console.log(`
 ╔═══════════════════════════════════════════╗
 ║   🎭 CHARACTER TIER LIST 🎭 (MEJORADO)   ║
-║   ✅ Sistema de botones                  ║
-║   ✅ Soporte móvil                       ║
-║   ✅ Tamaños optimizados                 ║
+║   ✅ Colores personalizables             ║
+║   ✅ Botones con primera letra           ║
+║   ✅ Textos largos con wrap              ║
 ║   🔥 Conectado a Firebase                ║
 ║   📚 Datos de MyAnimeList                ║
 ║   Hecho por: Jaykai2                     ║
