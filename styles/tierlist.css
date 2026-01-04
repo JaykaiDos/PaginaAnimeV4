@@ -1,6 +1,7 @@
 /* ============================================
-   TIER LIST - ESTILOS
+   TIER LIST - ESTILOS MEJORADOS
    Autor: Jaykai2
+   ✅ Optimizado para móvil y mejor UX
    ============================================ */
 
 /* === RESET Y BASE === */
@@ -38,13 +39,13 @@ body {
   background: linear-gradient(135deg, rgba(13, 2, 33, 0.95) 0%, rgba(38, 23, 94, 0.9) 100%);
   backdrop-filter: blur(10px);
   border-bottom: 2px solid #48cae440;
-  padding: 2rem 0;
+  padding: 1.5rem 0;
   text-align: center;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .page-title {
-  font-size: 3rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #caf0f8;
   text-shadow: 0 0 15px #48cae4, 0 0 30px #00b4d8;
@@ -63,7 +64,7 @@ body {
 
 .page-subtitle {
   color: #6ee7b7;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   text-shadow: 0 0 10px #34d399;
   margin-bottom: 1rem;
 }
@@ -72,12 +73,13 @@ body {
   display: inline-block;
   color: #ade8f4;
   text-decoration: none;
-  padding: 0.6rem 1.5rem;
+  padding: 0.5rem 1rem;
   border: 2px solid #48cae4;
   border-radius: 25px;
   transition: all 0.3s ease;
   font-weight: 700;
-  margin-top: 1rem;
+  margin: 0 0.5rem;
+  font-size: 0.85rem;
 }
 
 .back-link:hover {
@@ -91,40 +93,44 @@ body {
    CONTROLES
    ============================================ */
 .controls-section {
-  padding: 2rem 0;
+  padding: 1.5rem 0;
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 2px solid #48cae420;
 }
 
 .controls-grid {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2rem;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 200px;
 }
 
 .control-group.actions {
   flex-direction: row;
-  gap: 1rem;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .control-group label {
   color: #6ee7b7;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-#seasonFilter {
-  padding: 0.8rem 1.2rem;
-  font-size: 1rem;
+select {
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
   font-family: 'Roboto Mono', monospace;
   background-color: rgba(13, 2, 33, 0.8);
   border: 2px solid #48cae480;
@@ -134,7 +140,7 @@ body {
   transition: all 0.3s ease;
 }
 
-#seasonFilter:focus {
+select:focus {
   outline: none;
   border-color: #48cae4;
   box-shadow: 0 0 15px #48cae480;
@@ -142,10 +148,10 @@ body {
 
 /* Botones */
 .btn {
-  padding: 0.8rem 1.5rem;
+  padding: 0.7rem 1.2rem;
   font-family: 'Roboto Mono', monospace;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   border: 2px solid;
   border-radius: 8px;
   cursor: pointer;
@@ -199,7 +205,7 @@ body {
   border-color: #ef4444;
   color: #ef4444;
   padding: 0.4rem 0.8rem;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .btn-danger:hover {
@@ -209,23 +215,23 @@ body {
 }
 
 /* ============================================
-   TIER LIST AREA
+   TIER LIST AREA - MEJORADO
    ============================================ */
 .tierlist-container {
-  padding: 2rem 0;
+  padding: 1.5rem 0;
   min-height: 60vh;
 }
 
 .tiers-area {
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
-/* Tier Row */
+/* Tier Row - MÁS COMPACTO */
 .tier-row {
   display: grid;
-  grid-template-columns: 150px 1fr auto;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  grid-template-columns: 100px 1fr auto;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
   background: rgba(13, 2, 33, 0.8);
   border: 2px solid #48cae440;
   border-radius: 12px;
@@ -238,20 +244,18 @@ body {
   box-shadow: 0 0 20px #48cae480;
 }
 
-/* Tier Label */
+/* Tier Label - MÁS PEQUEÑO */
 .tier-label {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0.8rem;
   background: linear-gradient(135deg, rgba(72, 202, 228, 0.2) 0%, rgba(0, 180, 216, 0.1) 100%);
   border-right: 2px solid #48cae440;
-  gap: 0.5rem;
 }
 
 .tier-name {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #fff;
   text-shadow: 0 0 10px currentColor;
@@ -262,20 +266,6 @@ body {
 
 .tier-name:hover {
   transform: scale(1.1);
-}
-
-.tier-name-input {
-  font-size: 2.5rem;
-  font-weight: 700;
-  font-family: 'Roboto Mono', monospace;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid #48cae4;
-  border-radius: 8px;
-  color: #fff;
-  padding: 0.2rem 0.5rem;
-  width: 100%;
-  outline: none;
 }
 
 /* Colores de tiers */
@@ -294,18 +284,16 @@ body {
 .tier-row[data-tier="D"] .tier-label { background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.2) 100%); }
 .tier-row[data-tier="D"] .tier-name { color: #93c5fd; text-shadow: 0 0 15px #3b82f6; }
 
-.tier-row[data-tier="F"] .tier-label { background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(147, 51, 234, 0.2) 100%); }
-.tier-row[data-tier="F"] .tier-name { color: #d8b4fe; text-shadow: 0 0 15px #a855f7; }
-
-/* Tier Items Container */
+/* Tier Items Container - OPTIMIZADO */
 .tier-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
-  padding: 1rem;
-  min-height: 140px;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  min-height: 100px;
   align-items: flex-start;
   align-content: flex-start;
+  position: relative;
 }
 
 .tier-items.drag-over {
@@ -315,35 +303,41 @@ body {
 }
 
 .tier-items.empty::after {
-  content: 'Arrastra animes aquí';
+  content: 'Arrastra aquí o usa botones';
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   color: #48cae460;
   font-style: italic;
+  font-size: 0.85rem;
   pointer-events: none;
-}
-
-.tier-items {
-  position: relative;
 }
 
 /* Tier Actions */
 .tier-actions {
   display: flex;
   align-items: center;
-  padding: 1rem;
+  padding: 0.8rem;
 }
 
 /* ============================================
-   ANIME CARD
+   ANIME/CHARACTER CARD - MÁS COMPACTO
    ============================================ */
 .anime-card {
-  width: 110px;
+  width: 90px;
   cursor: grab;
   transition: all 0.3s ease;
   position: relative;
+  background: rgba(13, 2, 33, 0.9);
+  border-radius: 8px;
+  padding: 0.3rem;
+  border: 2px solid transparent;
+}
+
+.anime-card:hover {
+  border-color: #48cae4;
+  box-shadow: 0 0 10px #48cae480;
 }
 
 .anime-card:active {
@@ -355,29 +349,33 @@ body {
   transform: scale(0.9);
 }
 
+.anime-card.selected {
+  border-color: #fef08a;
+  box-shadow: 0 0 15px #fef08a80;
+}
+
 .anime-card img {
   width: 100%;
-  height: 150px;
+  height: 120px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 2px solid #48cae440;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .anime-card:hover img {
   border-color: #48cae4;
-  box-shadow: 0 0 15px #48cae4, 0 6px 12px rgba(0, 0, 0, 0.7);
-  transform: translateY(-5px);
+  box-shadow: 0 0 10px #48cae4, 0 4px 8px rgba(0, 0, 0, 0.7);
 }
 
 .anime-card-title {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: #ade8f4;
   text-align: center;
-  margin-top: 0.5rem;
-  line-height: 1.2;
-  max-height: 2.4em;
+  margin-top: 0.3rem;
+  line-height: 1.1;
+  max-height: 2em;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -386,14 +384,51 @@ body {
   -webkit-box-orient: vertical;
 }
 
+/* ✅ BOTONES DE ACCIONES RÁPIDAS */
+.anime-card-actions {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.anime-card:hover .anime-card-actions {
+  opacity: 1;
+}
+
+.quick-action-btn {
+  width: 24px;
+  height: 24px;
+  background: rgba(72, 202, 228, 0.9);
+  border: none;
+  border-radius: 4px;
+  color: #0d0221;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.quick-action-btn:hover {
+  background: #48cae4;
+  transform: scale(1.1);
+}
+
 /* ============================================
-   ANIME BANK
+   ANIME BANK - MEJORADO
    ============================================ */
 .anime-bank {
   background: rgba(13, 2, 33, 0.9);
   border: 2px solid #6ee7b740;
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
@@ -401,33 +436,57 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
   border-bottom: 2px solid #6ee7b740;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .bank-header h2 {
   color: #6ee7b7;
   text-shadow: 0 0 10px #34d399;
-  font-size: 1.8rem;
+  font-size: 1.3rem;
   letter-spacing: 0.1em;
 }
 
 .bank-info {
   color: #fef08a;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .anime-pool {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  min-height: 200px;
-  padding: 1rem;
+  gap: 0.8rem;
+  min-height: 180px;
+  padding: 0.8rem;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   align-content: flex-start;
+  position: relative;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Scrollbar personalizada */
+.anime-pool::-webkit-scrollbar {
+  width: 8px;
+}
+
+.anime-pool::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.anime-pool::-webkit-scrollbar-thumb {
+  background: #48cae4;
+  border-radius: 10px;
+}
+
+.anime-pool::-webkit-scrollbar-thumb:hover {
+  background: #00b4d8;
 }
 
 .anime-pool.drag-over {
@@ -435,19 +494,46 @@ body {
   border: 2px dashed #6ee7b7;
 }
 
-.anime-pool.empty::after {
-  content: 'No hay animes disponibles';
-  position: absolute;
+/* ============================================
+   ✅ MODO SELECCIÓN (PARA MÓVIL)
+   ============================================ */
+.selection-mode-indicator {
+  position: fixed;
+  bottom: 20px;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  color: #48cae460;
-  font-style: italic;
-  font-size: 1.2rem;
+  transform: translateX(-50%);
+  background: rgba(72, 202, 228, 0.95);
+  color: #0d0221;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(72, 202, 228, 0.6);
+  z-index: 1000;
+  display: none;
+  gap: 1rem;
+  align-items: center;
 }
 
-.anime-pool {
-  position: relative;
+.selection-mode-indicator.active {
+  display: flex;
+}
+
+.selection-mode-indicator button {
+  padding: 0.5rem 1rem;
+  background: #0d0221;
+  color: #48cae4;
+  border: none;
+  border-radius: 20px;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+}
+
+.selection-mode-indicator button:hover {
+  background: #26175e;
+  transform: scale(1.05);
 }
 
 /* ============================================
@@ -459,14 +545,14 @@ body {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 3rem;
+  padding: 2rem;
   width: 100%;
   color: #48cae4;
 }
 
 .spinner {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border: 4px solid rgba(72, 202, 228, 0.2);
   border-top-color: #48cae4;
   border-radius: 50%;
@@ -483,14 +569,15 @@ body {
 .main-footer {
   background: linear-gradient(135deg, rgba(13, 2, 33, 0.95) 0%, rgba(38, 23, 94, 0.9) 100%);
   border-top: 2px solid #48cae440;
-  padding: 2rem;
-  margin-top: 4rem;
+  padding: 1.5rem;
+  margin-top: 3rem;
   text-align: center;
 }
 
 .main-footer p {
   color: #ade8f4;
-  margin: 0.5rem 0;
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
 }
 
 .main-footer strong {
@@ -499,66 +586,158 @@ body {
 }
 
 /* ============================================
-   RESPONSIVE
+   RESPONSIVE - OPTIMIZADO PARA MÓVIL
    ============================================ */
 @media (max-width: 1024px) {
   .controls-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .control-group.actions {
-    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
   }
 
   .tier-row {
-    grid-template-columns: 120px 1fr auto;
-  }
-
-  .tier-name {
-    font-size: 2rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .page-title {
-    font-size: 2rem;
-  }
-
-  .tier-row {
-    grid-template-columns: 1fr;
-  }
-
-  .tier-label {
-    flex-direction: row;
-    justify-content: space-between;
-    border-right: none;
-    border-bottom: 2px solid #48cae440;
+    grid-template-columns: 80px 1fr auto;
   }
 
   .tier-name {
     font-size: 1.8rem;
   }
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .back-link {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .tier-row {
+    grid-template-columns: 70px 1fr;
+    gap: 0.5rem;
+  }
+
+  .tier-label {
+    padding: 0.5rem;
+  }
+
+  .tier-name {
+    font-size: 1.5rem;
+  }
+
+  .tier-actions {
+    grid-column: 1 / -1;
+    justify-content: center;
+    padding: 0.5rem;
+    border-top: 1px solid #48cae420;
+  }
+
+  .tier-items {
+    padding: 0.5rem;
+    min-height: 80px;
+    gap: 0.4rem;
+  }
 
   .anime-card {
-    width: 90px;
+    width: 75px;
   }
 
   .anime-card img {
-    height: 120px;
+    height: 100px;
   }
 
-  .bank-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
+  .anime-card-title {
+    font-size: 0.6rem;
   }
 
-  .control-group.actions {
-    width: 100%;
+  .bank-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .bank-info {
+    font-size: 0.8rem;
+  }
+
+  .anime-pool {
+    gap: 0.5rem;
+    padding: 0.5rem;
+    max-height: 300px;
+  }
+
+  /* Desactivar drag en móvil */
+  .anime-card {
+    cursor: pointer;
+  }
+
+  .anime-card:active {
+    cursor: pointer;
   }
 
   .btn {
-    flex: 1;
-    min-width: 0;
+    font-size: 0.75rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .anime-card {
+    width: 70px;
+  }
+
+  .anime-card img {
+    height: 90px;
+  }
+
+  .tier-name {
+    font-size: 1.3rem;
+  }
+
+  .selection-mode-indicator {
+    bottom: 10px;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* ============================================
+   UTILIDADES
+   ============================================ */
+.hidden {
+  display: none !important;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Touch-friendly en móvil */
+@media (hover: none) and (pointer: coarse) {
+  .anime-card {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .anime-card-actions {
+    opacity: 1;
+    position: static;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 0.3rem;
+  }
+  
+  .quick-action-btn {
+    width: 28px;
+    height: 28px;
   }
 }

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tier List de Personajes - Anime Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/tierlist.css">
+  <style>
+    /* Estilos para el sistema de búsqueda */
+    .anime-search-container {
+      position: relative;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    #animeSearchInput {
+      width: 100%;
+      padding: 0.7rem 2.5rem 0.7rem 1rem;
+      font-size: 0.9rem;
+      font-family: 'Roboto Mono', monospace;
+      background-color: rgba(13, 2, 33, 0.8);
+      border: 2px solid #48cae480;
+      border-radius: 8px;
+      color: #ade8f4;
+      transition: all 0.3s ease;
+    }
+
+    #animeSearchInput:focus {
+      outline: none;
+      border-color: #48cae4;
+      box-shadow: 0 0 15px #48cae480;
+    }
+
+    #animeSearchInput::placeholder {
+      color: #48cae460;
+    }
+
+    .clear-search-btn {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.3rem;
+      line-height: 1;
+      transition: all 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #animeSearchInput:not(:placeholder-shown) ~ .clear-search-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .clear-search-btn:hover {
+      color: #fff;
+      transform: translateY(-50%) scale(1.2);
+    }
+
+    #animeSearchResults {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.5rem;
+      background: rgba(13, 2, 33, 0.98);
+      border: 2px solid #48cae4;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 8px 32px rgba(72, 202, 228, 0.4);
+    }
+
+    /* Scrollbar personalizada para resultados */
+    #animeSearchResults::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #animeSearchResults::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+
+    #animeSearchResults::-webkit-scrollbar-thumb {
+      background: #48cae4;
+      border-radius: 10px;
+    }
+
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-bottom: 1px solid #48cae420;
+    }
+
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-result-item:hover {
+      background: rgba(72, 202, 228, 0.1);
+      padding-left: 1.2rem;
+    }
+
+    .search-result-item img {
+      width: 40px;
+      height: 55px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 2px solid #48cae440;
+    }
+
+    .search-result-item span {
+      color: #ade8f4;
+      font-size: 0.9rem;
+      flex: 1;
+    }
+
+    /* Ajustes responsive */
+    @media (max-width: 768px) {
+      .anime-search-container {
+        width: 100%;
+      }
+
+      #animeSearchResults {
+        max-height: 200px;
+      }
+
+      .search-result-item {
+        padding: 0.6rem;
+      }
+
+      .search-result-item img {
+        width: 35px;
+        height: 48px;
+      }
+
+      .search-result-item span {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="main-header">
+    <div class="container">
+      <h1 class="page-title">🎭 Tier List de Personajes 🎭</h1>
+      <p class="page-subtitle">Crea tu ranking personalizado de personajes</p>
+      <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+        <a href="../index.html" class="back-link">← Volver al Hub</a>
+        <a href="tierlist.html" class="back-link">🏆 Tier List de Animes</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTROLES PRINCIPALES -->
+  <section class="controls-section">
+    <div class="container">
+      <div class="controls-grid">
+        
+        <!-- Búsqueda de anime -->
+        <div class="control-group anime-search-container">
+          <label for="animeSearchInput">🎬 Buscar por Anime:</label>
+          <div class="search-input-wrapper">
+            <input 
+              type="text" 
+              id="animeSearchInput" 
+              placeholder="Escribe el nombre del anime..."
+              autocomplete="off"
+            >
+            <button class="clear-search-btn" onclick="clearAnimeSearch()" title="Limpiar búsqueda">✕</button>
+          </div>
+          <div id="animeSearchResults"></div>
+        </div>
+
+        <!-- Filtro de temporada -->
+        <div class="control-group">
+          <label for="seasonFilter">📅 Filtrar por Temporada:</label>
+          <select id="seasonFilter">
+            <option value="all">Todas las temporadas</option>
+          </select>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="control-group actions">
+          <button id="addTierBtn" class="btn btn-primary">
+            ➕ Agregar Tier
+          </button>
+          <button id="resetBtn" class="btn btn-secondary">
+            🔄 Reiniciar
+          </button>
+          <button id="exportBtn" class="btn btn-success">
+            📸 Exportar Imagen
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIER LIST CONTAINER -->
+  <main class="tierlist-container">
+    <div class="container">
+      
+      <!-- Área de Tiers -->
+      <div id="tiersArea" class="tiers-area">
+        <!-- Las tiers se generarán dinámicamente aquí -->
+      </div>
+
+      <!-- Banco de Personajes -->
+      <div class="anime-bank">
+        <div class="bank-header">
+          <h2>🎭 Banco de Personajes</h2>
+          <div class="bank-info">
+            <span id="characterCount">0 personajes disponibles</span>
+          </div>
+        </div>
+        <div id="characterPool" class="anime-pool">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Cargando personajes...</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="main-footer">
+    <div class="container">
+      <p>💻 Hecho por <strong>Jaykai2</strong> | Anime Hub 2025</p>
+      <p>🔥 Conectado a Firebase</p>
+      <p>📚 Datos de MyAnimeList</p>
+    </div>
+  </footer>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  
+  <!-- HTML2Canvas para exportar imagen -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- Scripts -->
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/firebase-service.js"></script>
+  <script src="../js/character-tierlist.js"></script>
+
+</body>
+</html>

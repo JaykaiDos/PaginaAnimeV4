@@ -1,6 +1,7 @@
 /* ============================================
    FIREBASE SERVICIOS - CRUD OPERATIONS
    Author: Jaykai2
+   ✅ ACTUALIZADO: Agregado soporte para personajes
    ============================================ */
 
 window.firebaseService = {
@@ -120,7 +121,7 @@ window.firebaseService = {
   },
 
   // ============================================
-  // EPISODES (EPISODIOS) - CORREGIDO
+  // EPISODES (EPISODIOS)
   // ============================================
   getEpisodesByAnime: async (animeId) => {
     try {
@@ -151,7 +152,6 @@ window.firebaseService = {
     try {
       console.log('📤 Agregando episodio:', episodeData);
       
-      // 1. Agregar el episodio a Firestore
       const docRef = await window.firebaseDB.episodesRef.add({
         ...episodeData,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -159,14 +159,12 @@ window.firebaseService = {
       
       console.log('✅ Episodio agregado con ID:', docRef.id);
       
-      // 2. Obtener todos los episodios del anime para recalcular el total
       const episodesSnapshot = await window.firebaseDB.episodesRef
         .where('animeId', '==', episodeData.animeId)
         .get();
       
       const totalEpisodes = episodesSnapshot.size;
       
-      // 3. Actualizar el contador en el documento del anime
       await window.firebaseDB.animesRef.doc(episodeData.animeId).update({
         totalEpisodes: totalEpisodes
       });
@@ -185,19 +183,16 @@ window.firebaseService = {
     try {
       console.log('🗑️ Eliminando episodio:', episodeId);
       
-      // 1. Eliminar el episodio
       await window.firebaseDB.episodesRef.doc(episodeId).delete();
       
       console.log('✅ Episodio eliminado');
       
-      // 2. Recalcular total de episodios
       const episodesSnapshot = await window.firebaseDB.episodesRef
         .where('animeId', '==', animeId)
         .get();
       
       const totalEpisodes = episodesSnapshot.size;
       
-      // 3. Actualizar contador en el anime
       await window.firebaseDB.animesRef.doc(animeId).update({
         totalEpisodes: totalEpisodes
       });
@@ -209,7 +204,149 @@ window.firebaseService = {
       console.error('❌ Error al eliminar episodio:', error);
       return { success: false, error };
     }
+  },
+
+  // ============================================
+  // ✅ CHARACTERS (PERSONAJES) - NUEVO
+  // ============================================
+  
+  /**
+   * Obtener todos los personajes
+   */
+  getAllCharacters: async () => {
+    try {
+      const snapshot = await window.firebaseDB.db.collection('characters').get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('❌ Error al obtener personajes:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Obtener personajes de un anime específico
+   */
+  getCharactersByAnime: async (animeId) => {
+    try {
+      const snapshot = await window.firebaseDB.db.collection('characters')
+        .where('animeId', '==', animeId)
+        .get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('❌ Error al obtener personajes del anime:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Agregar un personaje
+   */
+  addCharacter: async (characterData) => {
+    try {
+      const docRef = await window.firebaseDB.db.collection('characters').add({
+        ...characterData,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log('✅ Personaje agregado:', docRef.id);
+      return { success: true, id: docRef.id };
+    } catch (error) {
+      console.error('❌ Error al agregar personaje:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Agregar múltiples personajes (para importación desde Jikan)
+   */
+  addMultipleCharacters: async (charactersArray) => {
+    try {
+      const batch = window.firebaseDB.db.batch();
+      const charactersRef = window.firebaseDB.db.collection('characters');
+      
+      charactersArray.forEach(char => {
+        const newCharRef = charactersRef.doc();
+        batch.set(newCharRef, {
+          ...char,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      
+      await batch.commit();
+      console.log(`✅ ${charactersArray.length} personajes agregados en batch`);
+      return { success: true, count: charactersArray.length };
+    } catch (error) {
+      console.error('❌ Error al agregar personajes en batch:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Actualizar un personaje
+   */
+  updateCharacter: async (characterId, characterData) => {
+    try {
+      await window.firebaseDB.db.collection('characters').doc(characterId).update(characterData);
+      console.log('✅ Personaje actualizado:', characterId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error al actualizar personaje:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Eliminar un personaje
+   */
+  deleteCharacter: async (characterId) => {
+    try {
+      await window.firebaseDB.db.collection('characters').doc(characterId).delete();
+      console.log('✅ Personaje eliminado:', characterId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error al eliminar personaje:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Eliminar todos los personajes de un anime
+   */
+  deleteCharactersByAnime: async (animeId) => {
+    try {
+      const snapshot = await window.firebaseDB.db.collection('characters')
+        .where('animeId', '==', animeId)
+        .get();
+      
+      const batch = window.firebaseDB.db.batch();
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      
+      await batch.commit();
+      console.log(`✅ ${snapshot.size} personajes eliminados del anime`);
+      return { success: true, count: snapshot.size };
+    } catch (error) {
+      console.error('❌ Error al eliminar personajes del anime:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Verificar si un anime ya tiene personajes importados
+   */
+  hasCharacters: async (animeId) => {
+    try {
+      const snapshot = await window.firebaseDB.db.collection('characters')
+        .where('animeId', '==', animeId)
+        .limit(1)
+        .get();
+      return !snapshot.empty;
+    } catch (error) {
+      console.error('❌ Error al verificar personajes:', error);
+      return false;
+    }
   }
 };
 
 console.log('🔥 Firebase Service cargado correctamente');
+console.log('✅ Soporte para personajes agregado');

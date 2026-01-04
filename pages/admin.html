@@ -33,13 +33,14 @@
     <button class="nav-tab" data-tab="episodes">
       🎬 Episodios
     </button>
+    <button class="nav-tab" data-tab="characters">
+      🎭 Personajes
+    </button>
   </nav>
 
   <div class="admin-container">
 
-    <!-- ============================================ -->
-    <!-- TAB 1: GESTIÓN DE TEMPORADAS -->
-    <!-- ============================================ -->
+    <!-- TAB 1: TEMPORADAS -->
     <section class="tab-content active" id="seasons-tab">
       <div class="section-header">
         <h2 class="section-title">🗓️ Gestión de Temporadas</h2>
@@ -56,9 +57,7 @@
       </div>
     </section>
 
-    <!-- ============================================ -->
-    <!-- TAB 2: GESTIÓN DE ANIMES -->
-    <!-- ============================================ -->
+    <!-- TAB 2: ANIMES -->
     <section class="tab-content" id="animes-tab">
       <div class="section-header">
         <h2 class="section-title">📺 Gestión de Animes</h2>
@@ -67,7 +66,6 @@
         </button>
       </div>
 
-      <!-- Filtro por temporada -->
       <div class="filter-section">
         <label for="seasonFilter">Filtrar por temporada:</label>
         <select id="seasonFilter" onchange="filterAnimesBySeason()">
@@ -83,15 +81,12 @@
       </div>
     </section>
 
-    <!-- ============================================ -->
-    <!-- TAB 3: GESTIÓN DE EPISODIOS -->
-    <!-- ============================================ -->
+    <!-- TAB 3: EPISODIOS -->
     <section class="tab-content" id="episodes-tab">
       <div class="section-header">
         <h2 class="section-title">🎬 Gestión de Episodios</h2>
       </div>
 
-      <!-- Selector de anime -->
       <div class="filter-section">
         <label for="animeSelector">Selecciona un anime:</label>
         <select id="animeSelector" onchange="loadEpisodesByAnime()">
@@ -107,11 +102,35 @@
       </div>
     </section>
 
+    <!-- TAB 4: PERSONAJES -->
+    <section class="tab-content" id="characters-tab">
+      <div class="section-header">
+        <h2 class="section-title">🎭 Gestión de Personajes</h2>
+      </div>
+
+      <div class="info-box">
+        <p>ℹ️ Los personajes se importan automáticamente desde MyAnimeList.</p>
+        <p>Para importar personajes, ve a la pestaña <strong>Animes</strong> y presiona el botón <strong>"🎭 Importar Personajes"</strong>.</p>
+      </div>
+
+      <div class="filter-section">
+        <label for="characterAnimeFilter">Filtrar por anime:</label>
+        <select id="characterAnimeFilter" onchange="loadCharacters()">
+          <option value="all">Todos los animes</option>
+        </select>
+      </div>
+
+      <div class="characters-list" id="charactersList">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Cargando personajes...</p>
+        </div>
+      </div>
+    </section>
+
   </div>
 
-  <!-- ============================================ -->
-  <!-- MODAL: AGREGAR/EDITAR TEMPORADA -->
-  <!-- ============================================ -->
+  <!-- MODAL: TEMPORADA -->
   <div class="modal" id="seasonModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -150,21 +169,14 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" onclick="closeSeasonModal()">
-            Cancelar
-          </button>
-          <button type="submit" class="btn-primary">
-            Guardar Temporada
-          </button>
+          <button type="button" class="btn-secondary" onclick="closeSeasonModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Temporada</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ============================================ -->
-  <!-- MODAL: AGREGAR/EDITAR ANIME -->
-  <!-- ✅ MODIFICADO: Eliminado campo "TEMPORADA" redundante -->
-  <!-- ============================================ -->
+  <!-- MODAL: ANIME -->
   <div class="modal" id="animeModal">
     <div class="modal-content modal-large">
       <div class="modal-header">
@@ -184,6 +196,12 @@
         <div class="form-group">
           <label for="animeTitle">Título del Anime *</label>
           <input type="text" id="animeTitle" placeholder="Ej: Solo Leveling" required>
+        </div>
+
+        <div class="form-group">
+          <label for="animeMalId">MyAnimeList ID (opcional)</label>
+          <input type="number" id="animeMalId" placeholder="Ej: 52034">
+          <small>Si no lo conoces, déjalo vacío. Podrás vincularlo después para importar personajes.</small>
         </div>
 
         <div class="form-row">
@@ -236,20 +254,14 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" onclick="closeAnimeModal()">
-            Cancelar
-          </button>
-          <button type="submit" class="btn-primary">
-            Guardar Anime
-          </button>
+          <button type="button" class="btn-secondary" onclick="closeAnimeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Anime</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ============================================ -->
-  <!-- MODAL: AGREGAR EPISODIO -->
-  <!-- ============================================ -->
+  <!-- MODAL: EPISODIO -->
   <div class="modal" id="episodeModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -281,14 +293,34 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" onclick="closeEpisodeModal()">
-            Cancelar
-          </button>
-          <button type="submit" class="btn-primary">
-            Guardar Episodio
-          </button>
+          <button type="button" class="btn-secondary" onclick="closeEpisodeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Episodio</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BUSCAR EN MYANIMELIST -->
+  <div class="modal" id="malSearchModal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 class="modal-title">🔍 Buscar en MyAnimeList</h3>
+        <button class="btn-close" onclick="closeMalSearchModal()">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="malSearchQuery">Buscar anime:</label>
+          <div style="display: flex; gap: 1rem;">
+            <input type="text" id="malSearchQuery" placeholder="Ej: Solo Leveling" style="flex: 1;">
+            <button class="btn-primary" onclick="searchMal()">🔍 Buscar</button>
+          </div>
+        </div>
+
+        <div id="malSearchResults" style="margin-top: 2rem;">
+          <!-- Resultados aquí -->
+        </div>
+      </div>
     </div>
   </div>
 
@@ -300,6 +332,7 @@
   <!-- Scripts -->
   <script src="../js/firebase-config.js"></script>
   <script src="../js/auth.js"></script>
+  <script src="../js/jikan-service.js"></script>
   <script src="../js/firebase-service.js"></script>
   <script src="../js/admin-panel.js"></script>
 

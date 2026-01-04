@@ -1,56 +1,74 @@
 /* ============================================
-   ANIME TIER LIST - MEJORADO
+   CHARACTER TIER LIST - MEJORADO
    ✅ Con botones para mover sin arrastrar
    ✅ Soporte para móvil
    ============================================ */
 
 // Estado de la aplicación
+let allCharacters = [];
 let allAnimes = [];
 let currentFilter = 'all';
 let tiers = [];
 let draggedElement = null;
-let selectedAnime = null;
+let selectedCharacter = null;
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 // Elementos del DOM
 const tiersArea = document.getElementById('tiersArea');
-const animePool = document.getElementById('animePool');
+const characterPool = document.getElementById('characterPool');
+const animeSearchInput = document.getElementById('animeSearchInput');
+const animeSearchResults = document.getElementById('animeSearchResults');
 const seasonFilter = document.getElementById('seasonFilter');
 const addTierBtn = document.getElementById('addTierBtn');
 const resetBtn = document.getElementById('resetBtn');
 const exportBtn = document.getElementById('exportBtn');
-const animeCount = document.getElementById('animeCount');
+const characterCount = document.getElementById('characterCount');
+
+// Estado del filtro
+let selectedAnimeFilter = 'all';
+let selectedSeasonFilter = 'all';
 
 // ============================================
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('🏆 Tier List cargado (Versión mejorada)');
+  console.log('🎭 Character Tier List cargado (Versión mejorada)');
   
   if (window.firebaseService) {
     await loadSeasons();
     await loadAnimes();
+    await loadCharacters();
     initializeTiers();
     loadTierListFromStorage();
     initEventListeners();
+    initAnimeSearch();
     
     if (isMobile) {
       console.log('📱 Modo móvil detectado - usando sistema de botones');
     }
   } else {
     console.error('❌ Firebase Service no está disponible');
-    animePool.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 3rem;">❌ Error: Firebase no está configurado</p>';
+    characterPool.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 3rem;">❌ Error: Firebase no está configurado</p>';
   }
 });
 
 // ============================================
-// CARGAR TEMPORADAS PARA FILTRO
+// CARGAR ANIMES Y TEMPORADAS PARA FILTRO
 // ============================================
+const loadAnimes = async () => {
+  try {
+    allAnimes = await window.firebaseService.getAllAnimes();
+    console.log(`✅ ${allAnimes.length} animes cargados en filtro`);
+  } catch (error) {
+    console.error('❌ Error al cargar animes:', error);
+  }
+};
+
 const loadSeasons = async () => {
   try {
     const seasons = await window.firebaseService.getAllSeasons();
     
-    seasonFilter.innerHTML = '<option value="all">Todos los animes</option>';
+    seasonFilter.innerHTML = '<option value="all">Todas las temporadas</option>';
     
     seasons.forEach(season => {
       const option = document.createElement('option');
@@ -59,34 +77,37 @@ const loadSeasons = async () => {
       seasonFilter.appendChild(option);
     });
     
-    console.log(`✅ ${seasons.length} temporadas cargadas en filtro`);
+    console.log(`✅ ${seasons.length} temporadas cargadas`);
   } catch (error) {
     console.error('❌ Error al cargar temporadas:', error);
   }
 };
 
 // ============================================
-// CARGAR ANIMES DESDE FIREBASE
+// CARGAR PERSONAJES DESDE FIREBASE
 // ============================================
-const loadAnimes = async () => {
-  animePool.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando animes...</p></div>';
+const loadCharacters = async () => {
+  characterPool.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando personajes...</p></div>';
   
   try {
-    const animes = await window.firebaseService.getAllAnimes();
+    allCharacters = await window.firebaseService.getAllCharacters();
     
-    allAnimes = animes.map(anime => ({
-      id: anime.id,
-      title: anime.title,
-      image: anime.cardImage || anime.poster,
-      seasonId: anime.seasonId
-    }));
+    console.log(`✅ ${allCharacters.length} personajes cargados`);
     
-    console.log(`✅ ${allAnimes.length} animes cargados`);
+    if (allCharacters.length === 0) {
+      characterPool.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: #48cae480;">
+          <p style="font-size: 1.2rem; margin-bottom: 1rem;">No hay personajes disponibles</p>
+          <p>Ve al panel de administración para importar personajes desde MyAnimeList</p>
+        </div>
+      `;
+      return;
+    }
     
-    renderAnimePool();
+    applyFilters();
   } catch (error) {
-    console.error('❌ Error al cargar animes:', error);
-    animePool.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 3rem;">❌ Error al cargar animes</p>';
+    console.error('❌ Error al cargar personajes:', error);
+    characterPool.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 3rem;">❌ Error al cargar personajes</p>';
   }
 };
 
@@ -116,7 +137,7 @@ const renderTiers = () => {
         <div class="tier-name" onclick="editTierName('${tier.id}')">${tier.name}</div>
       </div>
       <div class="tier-items" data-tier-id="${tier.id}">
-        <!-- Animes se agregarán aquí -->
+        <!-- Personajes se agregarán aquí -->
       </div>
       <div class="tier-actions">
         <button class="btn btn-danger" onclick="deleteTier('${tier.id}')">🗑️</button>
@@ -128,54 +149,125 @@ const renderTiers = () => {
 };
 
 // ============================================
-// RENDERIZAR ANIME POOL
+// ✅ SISTEMA DE BÚSQUEDA DE ANIME
 // ============================================
-const renderAnimePool = () => {
-  let filteredAnimes = allAnimes;
-  
-  // Aplicar filtro de temporada
-  if (currentFilter !== 'all') {
-    filteredAnimes = allAnimes.filter(anime => anime.seasonId === currentFilter);
-  }
-  
-  // Filtrar animes que ya están en tiers
-  const animesInTiers = new Set();
-  document.querySelectorAll('.tier-items .anime-card').forEach(card => {
-    animesInTiers.add(card.dataset.animeId);
+const initAnimeSearch = () => {
+  // Evento de escritura en el input
+  animeSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toLowerCase();
+    
+    if (query.length === 0) {
+      animeSearchResults.style.display = 'none';
+      animeSearchResults.innerHTML = '';
+      return;
+    }
+    
+    // Filtrar animes que coincidan
+    const matches = allAnimes.filter(anime => 
+      anime.title.toLowerCase().includes(query)
+    ).slice(0, 10); // Máximo 10 resultados
+    
+    if (matches.length === 0) {
+      animeSearchResults.style.display = 'none';
+      return;
+    }
+    
+    // Mostrar resultados
+    animeSearchResults.innerHTML = matches.map(anime => `
+      <div class="search-result-item" data-anime-id="${anime.id}" onclick="selectAnimeFromSearch('${anime.id}', '${anime.title.replace(/'/g, "\\'")}')">
+        <img src="${anime.cardImage || anime.poster}" alt="${anime.title}">
+        <span>${anime.title}</span>
+      </div>
+    `).join('');
+    
+    animeSearchResults.style.display = 'block';
   });
   
-  filteredAnimes = filteredAnimes.filter(anime => !animesInTiers.has(anime.id));
+  // Cerrar resultados al hacer click fuera
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.anime-search-container')) {
+      animeSearchResults.style.display = 'none';
+    }
+  });
+};
+
+window.selectAnimeFromSearch = (animeId, animeTitle) => {
+  selectedAnimeFilter = animeId;
+  animeSearchInput.value = animeTitle;
+  animeSearchResults.style.display = 'none';
+  applyFilters();
+};
+
+window.clearAnimeSearch = () => {
+  selectedAnimeFilter = 'all';
+  animeSearchInput.value = '';
+  animeSearchResults.style.display = 'none';
+  applyFilters();
+};
+
+// ============================================
+// APLICAR FILTROS COMBINADOS
+// ============================================
+const applyFilters = () => {
+  let filteredCharacters = allCharacters;
+  
+  // Filtro por anime específico
+  if (selectedAnimeFilter !== 'all') {
+    filteredCharacters = filteredCharacters.filter(char => char.animeId === selectedAnimeFilter);
+  }
+  
+  // Filtro por temporada
+  if (selectedSeasonFilter !== 'all') {
+    const animeIdsInSeason = allAnimes
+      .filter(anime => anime.seasonId === selectedSeasonFilter)
+      .map(anime => anime.id);
+    
+    filteredCharacters = filteredCharacters.filter(char => 
+      animeIdsInSeason.includes(char.animeId)
+    );
+  }
+  
+  // Filtrar personajes que ya están en tiers
+  const charactersInTiers = new Set();
+  document.querySelectorAll('.tier-items .anime-card').forEach(card => {
+    charactersInTiers.add(card.dataset.characterId);
+  });
+  
+  filteredCharacters = filteredCharacters.filter(char => !charactersInTiers.has(char.id));
   
   // Actualizar contador
-  animeCount.textContent = `${filteredAnimes.length} animes disponibles`;
+  characterCount.textContent = `${filteredCharacters.length} personajes disponibles`;
   
-  if (filteredAnimes.length === 0) {
-    animePool.innerHTML = '<p style="color: #48cae460; text-align: center; padding: 3rem; font-style: italic;">No hay animes disponibles</p>';
+  if (filteredCharacters.length === 0) {
+    characterPool.innerHTML = '<p style="color: #48cae460; text-align: center; padding: 3rem; font-style: italic;">No hay personajes disponibles con estos filtros</p>';
     return;
   }
   
-  animePool.innerHTML = filteredAnimes.map(anime => createAnimeCard(anime)).join('');
-  
+  characterPool.innerHTML = filteredCharacters.map(char => createCharacterCard(char)).join('');
   initDragAndDrop();
 };
 
 // ============================================
-// CREAR TARJETA DE ANIME - MEJORADA
+// CREAR TARJETA DE PERSONAJE - MEJORADA
 // ============================================
-const createAnimeCard = (anime) => {
+const createCharacterCard = (character) => {
+  const anime = allAnimes.find(a => a.id === character.animeId);
+  const animeTitle = anime ? anime.title : 'Desconocido';
+  
   return `
-    <div class="anime-card ${isMobile ? 'mobile' : ''}" 
+    <div class="anime-card character-card ${isMobile ? 'mobile' : ''}" 
          draggable="${!isMobile}" 
-         data-anime-id="${anime.id}" 
-         data-anime-title="${anime.title}"
-         onclick="${isMobile ? `selectAnime('${anime.id}')` : ''}">
-      <img src="${anime.image}" alt="${anime.title}" onerror="this.src='https://via.placeholder.com/110x150?text=No+Image'">
-      <div class="anime-card-title">${anime.title}</div>
+         data-character-id="${character.id}" 
+         data-character-name="${character.name}"
+         data-anime-title="${animeTitle}"
+         onclick="${isMobile ? `selectCharacter('${character.id}')` : ''}">
+      <img src="${character.image}" alt="${character.name}" onerror="this.src='https://via.placeholder.com/110x150?text=No+Image'">
+      <div class="anime-card-title">${character.name}</div>
       ${!isMobile ? `
         <div class="anime-card-actions">
           ${tiers.map(tier => `
             <button class="quick-action-btn" 
-                    onclick="event.stopPropagation(); moveToTier('${anime.id}', '${tier.id}')"
+                    onclick="event.stopPropagation(); moveToTier('${character.id}', '${tier.id}')"
                     title="Mover a ${tier.name}">
               ${tier.name}
             </button>
@@ -189,22 +281,22 @@ const createAnimeCard = (anime) => {
 // ============================================
 // ✅ SISTEMA DE SELECCIÓN PARA MÓVIL
 // ============================================
-window.selectAnime = (animeId) => {
+window.selectCharacter = (characterId) => {
   if (!isMobile) return;
   
   // Deseleccionar anterior
-  if (selectedAnime) {
-    const prevCard = document.querySelector(`[data-anime-id="${selectedAnime}"]`);
+  if (selectedCharacter) {
+    const prevCard = document.querySelector(`[data-character-id="${selectedCharacter}"]`);
     if (prevCard) prevCard.classList.remove('selected');
   }
   
   // Seleccionar nuevo
-  if (selectedAnime === animeId) {
-    selectedAnime = null;
+  if (selectedCharacter === characterId) {
+    selectedCharacter = null;
     hideSelectionIndicator();
   } else {
-    selectedAnime = animeId;
-    const card = document.querySelector(`[data-anime-id="${animeId}"]`);
+    selectedCharacter = characterId;
+    const card = document.querySelector(`[data-character-id="${characterId}"]`);
     if (card) card.classList.add('selected');
     showSelectionIndicator();
   }
@@ -235,28 +327,28 @@ const hideSelectionIndicator = () => {
 };
 
 window.moveSelectedToTier = (tierId) => {
-  if (!selectedAnime) return;
+  if (!selectedCharacter) return;
   
-  moveToTier(selectedAnime, tierId);
+  moveToTier(selectedCharacter, tierId);
   cancelSelection();
 };
 
 window.cancelSelection = () => {
-  if (selectedAnime) {
-    const card = document.querySelector(`[data-anime-id="${selectedAnime}"]`);
+  if (selectedCharacter) {
+    const card = document.querySelector(`[data-character-id="${selectedCharacter}"]`);
     if (card) card.classList.remove('selected');
   }
-  selectedAnime = null;
+  selectedCharacter = null;
   hideSelectionIndicator();
 };
 
 // ============================================
-// ✅ MOVER ANIME A TIER (SIN ARRASTRAR)
+// ✅ MOVER PERSONAJE A TIER (SIN ARRASTRAR)
 // ============================================
-window.moveToTier = (animeId, tierId) => {
-  const animeCard = document.querySelector(`[data-anime-id="${animeId}"]`);
-  if (!animeCard) {
-    console.error('Anime no encontrado:', animeId);
+window.moveToTier = (characterId, tierId) => {
+  const characterCard = document.querySelector(`[data-character-id="${characterId}"]`);
+  if (!characterCard) {
+    console.error('Personaje no encontrado:', characterId);
     return;
   }
   
@@ -267,17 +359,17 @@ window.moveToTier = (animeId, tierId) => {
   }
   
   // Remover botones de acción antes de mover
-  const actions = animeCard.querySelector('.anime-card-actions');
+  const actions = characterCard.querySelector('.anime-card-actions');
   if (actions) actions.remove();
   
   // Mover a la tier
-  tierContainer.appendChild(animeCard);
+  tierContainer.appendChild(characterCard);
   
   // Actualizar UI
-  renderAnimePool();
+  applyFilters();
   saveTierListToStorage();
   
-  console.log(`✅ Anime movido a tier ${tierId}`);
+  console.log(`✅ Personaje movido a tier ${tierId}`);
 };
 
 // ============================================
@@ -293,7 +385,7 @@ const initDragAndDrop = () => {
     card.addEventListener('dragend', handleDragEnd);
   });
   
-  const dropZones = [...document.querySelectorAll('.tier-items'), animePool];
+  const dropZones = [...document.querySelectorAll('.tier-items'), characterPool];
   
   dropZones.forEach(zone => {
     zone.addEventListener('dragover', handleDragOver);
@@ -336,7 +428,7 @@ const handleDrop = (e) => {
   
   e.currentTarget.appendChild(draggedElement);
   
-  renderAnimePool();
+  applyFilters();
   saveTierListToStorage();
 };
 
@@ -393,22 +485,22 @@ window.deleteTier = (tierId) => {
   
   const tier = tiers.find(t => t.id === tierId);
   
-  if (!confirm(`¿Eliminar la tier "${tier.name}"? Los animes volverán al banco.`)) {
+  if (!confirm(`¿Eliminar la tier "${tier.name}"? Los personajes volverán al banco.`)) {
     return;
   }
   
   const tierElement = document.querySelector(`[data-tier-id="${tierId}"]`);
   const tierItems = tierElement.querySelector('.tier-items');
-  const animeCards = tierItems.querySelectorAll('.anime-card');
+  const characterCards = tierItems.querySelectorAll('.anime-card');
   
-  animeCards.forEach(card => {
-    animePool.appendChild(card);
+  characterCards.forEach(card => {
+    characterPool.appendChild(card);
   });
   
   tiers = tiers.filter(t => t.id !== tierId);
   
   renderTiers();
-  renderAnimePool();
+  applyFilters();
   saveTierListToStorage();
   
   console.log('✅ Tier eliminada:', tier.name);
@@ -423,16 +515,16 @@ window.resetTierList = () => {
   }
   
   document.querySelectorAll('.tier-items .anime-card').forEach(card => {
-    animePool.appendChild(card);
+    characterPool.appendChild(card);
   });
   
   initializeTiers();
-  renderAnimePool();
+  applyFilters();
   
-  localStorage.removeItem('tierlist_state');
-  localStorage.removeItem('tierlist_tiers');
+  localStorage.removeItem('character_tierlist_state');
+  localStorage.removeItem('character_tierlist_tiers');
   
-  console.log('✅ Tier List reiniciado');
+  console.log('✅ Character Tier List reiniciado');
 };
 
 // ============================================
@@ -440,23 +532,21 @@ window.resetTierList = () => {
 // ============================================
 const saveTierListToStorage = () => {
   try {
-    // Guardar estructura de tiers
-    localStorage.setItem('tierlist_tiers', JSON.stringify(tiers));
+    localStorage.setItem('character_tierlist_tiers', JSON.stringify(tiers));
     
-    // Guardar distribución de animes
     const tierState = {};
     
     document.querySelectorAll('.tier-items').forEach(tierContainer => {
       const tierId = tierContainer.dataset.tierId;
-      const animeIds = Array.from(tierContainer.querySelectorAll('.anime-card'))
-        .map(card => card.dataset.animeId);
+      const characterIds = Array.from(tierContainer.querySelectorAll('.anime-card'))
+        .map(card => card.dataset.characterId);
       
-      tierState[tierId] = animeIds;
+      tierState[tierId] = characterIds;
     });
     
-    localStorage.setItem('tierlist_state', JSON.stringify(tierState));
+    localStorage.setItem('character_tierlist_state', JSON.stringify(tierState));
     
-    console.log('💾 Tier List guardado');
+    console.log('💾 Character Tier List guardado');
   } catch (error) {
     console.error('❌ Error al guardar:', error);
   }
@@ -467,15 +557,13 @@ const saveTierListToStorage = () => {
 // ============================================
 const loadTierListFromStorage = () => {
   try {
-    // Cargar tiers
-    const savedTiers = localStorage.getItem('tierlist_tiers');
+    const savedTiers = localStorage.getItem('character_tierlist_tiers');
     if (savedTiers) {
       tiers = JSON.parse(savedTiers);
       renderTiers();
     }
     
-    // Cargar distribución
-    const savedState = localStorage.getItem('tierlist_state');
+    const savedState = localStorage.getItem('character_tierlist_state');
     if (savedState) {
       const tierState = JSON.parse(savedState);
       
@@ -483,22 +571,22 @@ const loadTierListFromStorage = () => {
         const tierContainer = document.querySelector(`.tier-items[data-tier-id="${tierId}"]`);
         if (!tierContainer) return;
         
-        tierState[tierId].forEach(animeId => {
-          const animeCard = document.querySelector(`.anime-card[data-anime-id="${animeId}"]`);
-          if (animeCard) {
+        tierState[tierId].forEach(characterId => {
+          const characterCard = document.querySelector(`.anime-card[data-character-id="${characterId}"]`);
+          if (characterCard) {
             // Remover botones de acción antes de mover
-            const actions = animeCard.querySelector('.anime-card-actions');
+            const actions = characterCard.querySelector('.anime-card-actions');
             if (actions) actions.remove();
             
-            tierContainer.appendChild(animeCard);
+            tierContainer.appendChild(characterCard);
           }
         });
       });
       
-      // Actualizar pool después de mover animes
-      renderAnimePool();
+      // Actualizar pool después de mover personajes
+      applyFilters();
       
-      console.log('✅ Tier List cargado desde storage');
+      console.log('✅ Character Tier List cargado desde storage');
     }
   } catch (error) {
     console.error('❌ Error al cargar:', error);
@@ -510,7 +598,6 @@ const loadTierListFromStorage = () => {
 // ============================================
 window.exportTierList = async () => {
   try {
-    // Ocultar botones temporalmente
     document.querySelectorAll('.tier-actions').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.anime-card-actions').forEach(el => el.style.display = 'none');
     
@@ -523,17 +610,15 @@ window.exportTierList = async () => {
       useCORS: true
     });
     
-    // Restaurar botones
     document.querySelectorAll('.tier-actions').forEach(el => el.style.display = '');
     document.querySelectorAll('.anime-card-actions').forEach(el => el.style.display = '');
     
-    // Descargar imagen
     const link = document.createElement('a');
-    link.download = `tierlist-${Date.now()}.png`;
+    link.download = `character-tierlist-${Date.now()}.png`;
     link.href = canvas.toDataURL();
     link.click();
     
-    console.log('📸 Tier List exportado como imagen');
+    console.log('📸 Character Tier List exportado como imagen');
   } catch (error) {
     console.error('❌ Error al exportar:', error);
     alert('❌ Error al exportar imagen. Intenta nuevamente.');
@@ -546,26 +631,23 @@ window.exportTierList = async () => {
 const initEventListeners = () => {
   // Filtro de temporada
   seasonFilter.addEventListener('change', (e) => {
-    currentFilter = e.target.value;
-    renderAnimePool();
+    selectedSeasonFilter = e.target.value;
+    applyFilters();
   });
   
-  // Botones principales
   addTierBtn.addEventListener('click', addNewTier);
   resetBtn.addEventListener('click', resetTierList);
   exportBtn.addEventListener('click', exportTierList);
 };
 
-// ============================================
-// MENSAJE DE CONSOLA
-// ============================================
 console.log(`
 ╔═══════════════════════════════════════════╗
-║   🏆 TIER LIST CREATOR 🏆 (MEJORADO)     ║
+║   🎭 CHARACTER TIER LIST 🎭 (MEJORADO)   ║
 ║   ✅ Sistema de botones                  ║
 ║   ✅ Soporte móvil                       ║
 ║   ✅ Tamaños optimizados                 ║
 ║   🔥 Conectado a Firebase                ║
+║   📚 Datos de MyAnimeList                ║
 ║   Hecho por: Jaykai2                     ║
 ╚═══════════════════════════════════════════╝
 `);
