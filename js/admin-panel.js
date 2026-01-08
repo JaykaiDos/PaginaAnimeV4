@@ -269,7 +269,8 @@ const deleteAnimeHandler = async (animeId) => {
 };
 
 // ============================================
-// ✅ IMPORTAR PERSONAJES DESDE JIKAN
+// ✅ IMPORTAR PERSONAJES DESDE JIKAN (SIN LÍMITE)
+// Reemplaza esta función en tu admin-panel.js
 // ============================================
 window.importCharactersForAnime = async (animeId) => {
   const anime = currentAnimes.find(a => a.id === animeId);
@@ -296,27 +297,50 @@ window.importCharactersForAnime = async (animeId) => {
   }
   
   try {
-    // Mostrar loading
+    // ✅ Mostrar loading mejorado
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'importLoading';
     loadingDiv.innerHTML = `
       <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                  background: rgba(13, 2, 33, 0.95); padding: 2rem; border-radius: 12px; 
-                  border: 2px solid #48cae4; z-index: 10000; text-align: center;">
-        <div class="spinner" style="margin: 0 auto 1rem;"></div>
-        <p style="color: #ade8f4;">Importando personajes desde MyAnimeList...</p>
+                  background: rgba(13, 2, 33, 0.98); padding: 2.5rem; border-radius: 16px; 
+                  border: 3px solid #48cae4; z-index: 10000; text-align: center; 
+                  box-shadow: 0 0 50px rgba(72, 202, 228, 0.6); max-width: 450px;">
+        <div class="spinner" style="width: 60px; height: 60px; border: 4px solid rgba(72, 202, 228, 0.2); 
+                                     border-top-color: #48cae4; border-radius: 50%; margin: 0 auto 1.5rem; 
+                                     animation: spin 1s linear infinite;"></div>
+        <h3 style="color: #caf0f8; margin-bottom: 1rem; font-size: 1.3rem; text-shadow: 0 0 10px #48cae4;">
+          🎭 Importando Personajes
+        </h3>
+        <p style="color: #ade8f4; line-height: 1.6; margin-bottom: 0.5rem;">
+          Obteniendo <strong>TODOS</strong> los personajes desde MyAnimeList...
+        </p>
+        <p style="color: #6ee7b7; font-size: 0.9rem; font-style: italic;">
+          ⏱️ Esto puede tardar unos segundos
+        </p>
       </div>
     `;
     document.body.appendChild(loadingDiv);
     
-    // Obtener personajes desde Jikan
+    console.log(`🎭 Iniciando importación para: ${anime.title}`);
+    console.log(`📡 MAL ID: ${anime.malId}`);
+    
+    // ✅ Obtener personajes desde Jikan (SIN LÍMITE)
     const characters = await window.jikanService.getAnimeCharacters(anime.malId);
     
     if (characters.length === 0) {
-      alert('⚠️ No se encontraron personajes para este anime');
       document.body.removeChild(loadingDiv);
+      alert('⚠️ No se encontraron personajes para este anime');
       return;
     }
+    
+    // ✅ Mostrar estadísticas en consola
+    const mainCount = characters.filter(c => c.role === 'Main').length;
+    const supportingCount = characters.filter(c => c.role === 'Supporting').length;
+    
+    console.log(`📊 Personajes encontrados:`);
+    console.log(`   • Principales: ${mainCount}`);
+    console.log(`   • Secundarios: ${supportingCount}`);
+    console.log(`   • TOTAL: ${characters.length}`);
     
     // Preparar datos para Firebase
     const charactersToAdd = characters.map(char => ({
@@ -329,19 +353,30 @@ window.importCharactersForAnime = async (animeId) => {
       favorites: char.favorites
     }));
     
-    // Guardar en Firebase
+    // ✅ Guardar en Firebase
+    console.log('💾 Guardando en Firebase...');
     const result = await addMultipleCharacters(charactersToAdd);
     
     document.body.removeChild(loadingDiv);
     
     if (result.success) {
-      alert(`✅ ${result.count} personajes importados correctamente`);
+      // ✅ Mensaje de éxito detallado
+      const message = `✅ Importación exitosa!\n\n` +
+                     `📊 Total: ${result.count} personajes\n` +
+                     `⭐ Principales: ${mainCount}\n` +
+                     `💥 Secundarios: ${supportingCount}\n\n` +
+                     `Los personajes ya están disponibles en el Tier List.`;
+      
+      alert(message);
+      console.log('✅ Importación completada exitosamente');
     } else {
       alert('❌ Error al importar personajes');
+      console.error('❌ Error en la importación:', result.error);
     }
   } catch (error) {
-    console.error('❌ Error en importación:', error);
-    alert('❌ Error al importar personajes. Verifica la consola.');
+    console.error('❌ Error crítico en importación:', error);
+    alert(`❌ Error al importar personajes.\n\nDetalles: ${error.message}\n\nVerifica la consola para más información.`);
+    
     const loadingDiv = document.getElementById('importLoading');
     if (loadingDiv) document.body.removeChild(loadingDiv);
   }

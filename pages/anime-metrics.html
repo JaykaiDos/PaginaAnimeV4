@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>👑 Modo Supervivencia - Rey de la Colina</title>
+  
+  <!-- SEO -->
+  <meta name="description" content="Modo Supervivencia: ¿Cuántos rivales puede vencer tu anime favorito en atributos aleatorios?">
+  
+  <!-- Styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/anime-metrics.css">
+</head>
+<body>
+
+  <!-- ============================================
+       HEADER
+       ============================================ -->
+  <header class="main-header">
+    <div class="container">
+      <h1 class="page-title">👑 Modo Supervivencia 👑</h1>
+      <p class="page-subtitle">Rey de la Colina - ¿Cuántos rivales puede vencer tu anime?</p>
+      <nav class="header-nav">
+        <a href="../index.html" class="back-link">← Volver al Hub</a>
+        <a href="search.html" class="back-link">🔍 Búsqueda</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============================================
+       SETUP SCREEN (Configuración Inicial)
+       ============================================ -->
+  <section id="setupScreen" class="screen active">
+    <div class="container">
+      <div class="setup-card">
+        <h2 class="section-title">⚙️ Configuración del Gauntlet</h2>
+        
+        <!-- Fuente de Datos -->
+        <div class="setup-group">
+          <label class="setup-label">
+            <span class="label-icon">📊</span>
+            <span class="label-text">Fuente de Datos:</span>
+          </label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="dataSource" value="season" checked>
+              <span class="radio-custom"></span>
+              <span class="radio-text">Temporada Específica</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="dataSource" value="favorites">
+              <span class="radio-custom"></span>
+              <span class="radio-text">Mis Favoritos</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="dataSource" value="global">
+              <span class="radio-custom"></span>
+              <span class="radio-text">Global (Todos)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Selector de Temporada -->
+        <div class="setup-group" id="seasonSelectorGroup">
+          <label class="setup-label">
+            <span class="label-icon">📅</span>
+            <span class="label-text">Selecciona Temporada:</span>
+          </label>
+          <select id="seasonSelector" class="setup-select">
+            <option value="">Cargando temporadas...</option>
+          </select>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+          <p>👑 <strong>¿Cómo funciona el Modo Supervivencia?</strong></p>
+          <p><strong>El Campeón</strong> se mantiene en pantalla y debe defender su puesto contra <strong>Aspirantes</strong> que llegan constantemente.</p>
+          <p>🎰 Cada nuevo duelo tiene un <strong>atributo aleatorio</strong>. Si el Campeón pierde, el Aspirante toma su lugar.</p>
+          <p>🏆 ¡El objetivo es lograr la racha más larga posible!</p>
+        </div>
+
+        <!-- Botón Iniciar -->
+        <button id="startSessionBtn" class="btn btn-primary btn-large">
+          🚀 Iniciar Gauntlet
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================
+       GAUNTLET SCREEN (Modo Supervivencia)
+       ============================================ -->
+  <section id="gauntletScreen" class="screen">
+    <div class="container-gauntlet">
+      
+      <!-- Sidebar de Estadísticas -->
+      <aside class="stats-sidebar">
+        <h3 class="sidebar-title">📊 Estadísticas Live</h3>
+        
+        <!-- Racha Actual -->
+        <div class="current-streak-box">
+          <div class="streak-label">🔥 Racha Actual</div>
+          <div class="streak-value" id="currentStreak">0</div>
+          <div class="streak-champion" id="streakChampion">-</div>
+        </div>
+        
+        <!-- Top Defensores -->
+        <div class="top-defenders-box">
+          <h4 class="defenders-title">🏆 Top Defensores</h4>
+          <ul class="defenders-list" id="defendersList">
+            <li class="empty-defenders">Aún no hay defensores</li>
+          </ul>
+        </div>
+        
+        <!-- Total de Duelos -->
+        <div class="total-duels-box">
+          <div class="duels-label">⚔️ Duelos Totales</div>
+          <div class="duels-value" id="totalDuels">0</div>
+        </div>
+        
+        <!-- Botón Finalizar -->
+        <button id="finishBtn" class="btn btn-danger btn-block">
+          📊 Finalizar Gauntlet
+        </button>
+      </aside>
+
+      <!-- Arena Principal -->
+      <main class="gauntlet-arena">
+        
+        <!-- Ruleta de Atributos -->
+        <div class="attribute-display">
+          <div class="attribute-icon">🎰</div>
+          <h2 class="attribute-title" id="currentAttribute">Cargando atributo...</h2>
+          <p class="attribute-description" id="attributeDescription">Descripción</p>
+        </div>
+
+        <!-- Batalla -->
+        <div class="battle-zone">
+          
+          <!-- CAMPEÓN (Izquierda) -->
+          <div class="fighter-container champion-container">
+            <div class="fighter-badge champion-badge">
+              👑 CAMPEÓN
+            </div>
+            <div class="fighter-card champion-card" id="championCard">
+              <img src="" alt="" class="fighter-image" id="championImage">
+              <h3 class="fighter-title" id="championTitle">Cargando...</h3>
+              <div class="fighter-streak" id="championStreakBadge">
+                🔥 Racha: <span id="championStreakValue">0</span>
+              </div>
+            </div>
+            <button class="vote-btn champion-vote-btn" id="voteChampionBtn">
+              <span class="vote-icon">👑</span>
+              <span class="vote-text">Voto por el Campeón</span>
+            </button>
+          </div>
+
+          <!-- VS Divider -->
+          <div class="vs-divider">
+            <span class="vs-text">VS</span>
+          </div>
+
+          <!-- ASPIRANTE (Derecha) -->
+          <div class="fighter-container challenger-container">
+            <div class="fighter-badge challenger-badge">
+              ⚔️ ASPIRANTE
+            </div>
+            <div class="fighter-card challenger-card" id="challengerCard">
+              <img src="" alt="" class="fighter-image" id="challengerImage">
+              <h3 class="fighter-title" id="challengerTitle">Cargando...</h3>
+              <div class="fighter-info">
+                Nuevo Retador
+              </div>
+            </div>
+            <button class="vote-btn challenger-vote-btn" id="voteChallengerBtn">
+              <span class="vote-icon">⚔️</span>
+              <span class="vote-text">Voto por el Aspirante</span>
+            </button>
+          </div>
+
+        </div>
+        
+        <!-- Botón Empate -->
+        <div class="action-center">
+          <button id="tieBtn" class="btn btn-secondary btn-tie">
+            🤝 Empate (Re-rotar atributo)
+          </button>
+        </div>
+
+      </main>
+
+    </div>
+  </section>
+
+  <!-- ============================================
+       RESULTS SCREEN (Pantalla Final)
+       ============================================ -->
+  <section id="resultsScreen" class="screen">
+    <div class="container">
+      
+      <h2 class="section-title">🏆 Análisis del Gauntlet</h2>
+
+      <!-- Gran Campeón -->
+      <div class="grand-champion-section">
+        <h3 class="subsection-title">👑 Gran Campeón de la Sesión</h3>
+        <div class="grand-champion-card" id="grandChampionCard">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+
+      <!-- Estadísticas Generales -->
+      <div class="stats-summary">
+        <div class="stat-card">
+          <div class="stat-icon">⚔️</div>
+          <div class="stat-value" id="finalTotalDuels">0</div>
+          <div class="stat-label">Duelos Totales</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-value" id="finalTotalAnimes">0</div>
+          <div class="stat-label">Animes Participantes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value" id="finalLongestStreak">0</div>
+          <div class="stat-label">Racha Más Larga</div>
+        </div>
+      </div>
+
+      <!-- Top 5 Defensores -->
+      <div class="top-defenders-section">
+        <h3 class="subsection-title">🏅 Top 5 Mejores Defensores</h3>
+        <div class="podium-container" id="podiumContainer">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+
+      <!-- Tabla de Atributos Dominantes -->
+      <div class="attributes-section">
+        <h3 class="subsection-title">🎯 Atributos Más Competidos</h3>
+        <div class="attributes-chart" id="attributesChart">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="action-buttons">
+        <button id="newGauntletBtn" class="btn btn-primary">
+          🔄 Nuevo Gauntlet
+        </button>
+        <button id="exportBtn" class="btn btn-success">
+          💾 Guardar en Firebase
+        </button>
+        <button id="shareBtn" class="btn btn-secondary">
+          📤 Compartir Resultados
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================
+       FOOTER
+       ============================================ -->
+  <footer class="main-footer">
+    <div class="container">
+      <p>✨ Hecho por <strong>Jaykai2</strong> | Anime Hub 2025</p>
+      <p>👑 Modo Supervivencia</p>
+    </div>
+  </footer>
+
+  <!-- ============================================
+       SCRIPTS
+       ============================================ -->
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  
+  <!-- Firebase Config y Services -->
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/firebase-service.js"></script>
+  
+  <!-- Anime Metrics Logic (NUEVO) -->
+  <script src="../js/anime-metrics.js"></script>
+
+</body>
+</html>

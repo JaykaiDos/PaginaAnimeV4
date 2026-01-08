@@ -1,6 +1,7 @@
 /* ============================================
    JIKAN API SERVICE - MyAnimeList Integration
    Autor: Jaykai2
+   ✅ ACTUALIZADO: Sin límite de personajes
    ============================================ */
 
 const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
@@ -79,11 +80,13 @@ const searchAnime = async (query) => {
 };
 
 // ============================================
-// OBTENER PERSONAJES DE UN ANIME
+// ✅ OBTENER PERSONAJES DE UN ANIME (SIN LÍMITE)
 // ============================================
 const getAnimeCharacters = async (malId) => {
   return queueRequest(async () => {
     try {
+      console.log(`📡 Solicitando personajes para MAL ID: ${malId}`);
+      
       const response = await fetch(`${JIKAN_BASE_URL}/anime/${malId}/characters`);
       
       if (!response.ok) {
@@ -92,10 +95,12 @@ const getAnimeCharacters = async (malId) => {
       
       const data = await response.json();
       
-      // Filtrar solo personajes principales y secundarios importantes
+      console.log(`📊 Total de personajes recibidos: ${data.data.length}`);
+      
+      // ✅ IMPORTANTE: NO HAY LÍMITE - Se procesan TODOS los personajes
       return data.data
         .filter(char => char.role === 'Main' || char.role === 'Supporting')
-        .slice(0, 20) // Limitar a 20 personajes
+        // ❌ LÍNEA ELIMINADA: .slice(0, 20)
         .map(char => ({
           malId: char.character.mal_id,
           name: char.character.name,
@@ -193,3 +198,4 @@ window.jikanService = {
 
 console.log('🔗 Jikan API Service cargado');
 console.log('📚 Conectado a MyAnimeList');
+console.log('✅ Sin límite de personajes');
