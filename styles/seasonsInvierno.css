@@ -246,34 +246,198 @@ h1 {
   margin-right: 0.5rem;
 }
 
-/* === FAVORITE BUTTON === */
-.fav-btn {
+/* ============================================================
+   BOTÓN DE FAVORITOS DINÁMICO — SISTEMA COMPLETO
+   ============================================================ */
+
+/* --- Wrapper: posición relativa para el picker flotante --- */
+.fav-btn-wrapper {
+  position: relative;
   align-self: flex-start;
-  padding: 0.8rem 1.5rem;
-  background-color: rgba(196, 181, 253, 0.1);
-  border: 2px solid #c4b5fd;
-  border-radius: 8px;
-  color: #c4b5fd;
-  font-family: 'Roboto Mono', monospace;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-.fav-btn:hover {
-  background-color: #c4b5fd;
-  color: #0c1445;
-  box-shadow: 0 0 15px #c4b5fd;
+/* --- Botón principal --- */
+.fav-btn--main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.4rem;
+  background: rgba(255, 171, 64, 0.08);
+  border: 2px solid #ffab40;
+  border-radius: 10px;
+  color: #ffab40;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.2s ease, border-color 0.22s ease, color 0.22s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.fav-btn__icon {
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.fav-btn--main:hover {
+  background: rgba(255, 171, 64, 0.16);
+  box-shadow: 0 0 16px rgba(255, 171, 64, 0.35);
   transform: translateY(-2px);
 }
 
-.fav-btn.active {
-  background-color: #a78bfa;
-  border-color: #a78bfa;
-  color: #0c1445;
+.fav-btn--main:hover .fav-btn__icon {
+  transform: scale(1.25) rotate(-5deg);
 }
+
+/* Estado: Viendo → verde */
+.fav-btn--main.fav-btn--watching {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: #22c55e;
+  color: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+}
+.fav-btn--main.fav-btn--watching:hover {
+  background: rgba(34, 197, 94, 0.22);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+/* Estado: Pendiente → amarillo */
+.fav-btn--main.fav-btn--pending {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: #eab308;
+  color: #eab308;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.2);
+}
+.fav-btn--main.fav-btn--pending:hover {
+  background: rgba(234, 179, 8, 0.22);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
+}
+
+/* Estado: Finalizado → azul */
+.fav-btn--main.fav-btn--completed {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: #60a5fa;
+  color: #60a5fa;
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.2);
+}
+.fav-btn--main.fav-btn--completed:hover {
+  background: rgba(96, 165, 250, 0.22);
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
+}
+
+/* --- Picker flotante (dropdown vertical) --- */
+.fav-status-picker {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 200;
+  width: 200px;
+  background: rgba(18, 10, 26, 0.97);
+  border: 1.5px solid rgba(255, 171, 64, 0.35);
+  border-radius: 14px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.8),
+    0 0 24px rgba(255, 171, 64, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+
+  /* Animación de entrada */
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Flecha decorativa superior */
+.fav-status-picker::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: rgba(18, 10, 26, 0.97);
+  border-left: 1.5px solid rgba(255, 171, 64, 0.35);
+  border-top: 1.5px solid rgba(255, 171, 64, 0.35);
+  transform: rotate(45deg);
+}
+
+.fav-status-picker.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Título del picker */
+.fav-status-picker__title {
+  font-size: 0.65rem;
+  color: rgba(255, 171, 64, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0.7rem 0.5rem;
+  margin-bottom: 0.1rem;
+  border-bottom: 1px solid rgba(255, 171, 64, 0.12);
+}
+
+/* --- Opciones del picker --- */
+.fav-status-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  color: rgba(255, 179, 128, 0.85);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  letter-spacing: 0.03em;
+}
+
+.fav-status-option:hover {
+  transform: translateX(3px);
+}
+
+.fav-status-option[data-status="watching"]:hover {
+  background: rgba(34, 197, 94, 0.14);
+  color: #22c55e;
+}
+.fav-status-option[data-status="pending"]:hover {
+  background: rgba(234, 179, 8, 0.14);
+  color: #eab308;
+}
+.fav-status-option[data-status="completed"]:hover {
+  background: rgba(96, 165, 250, 0.14);
+  color: #60a5fa;
+}
+
+/* Separador antes de "Quitar" */
+.fav-status-option--remove {
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(255, 171, 64, 0.12);
+  padding-top: 0.65rem;
+  color: rgba(239, 68, 68, 0.6);
+}
+.fav-status-option--remove:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+}
+
+/* Compatibilidad: ocultar clase vieja si quedara */
+.fav-btn:not(.fav-btn--main) { display: none; }
 
 /* === TRAILERS === */
 .trailers {

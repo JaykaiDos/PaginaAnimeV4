@@ -105,6 +105,22 @@ const createAnimeCard = (anime) => {
     article.id = anime.id;
     article.setAttribute('data-title', anime.title);
 
+    // --------------------------------------------------
+    // Atributos extra usados por initFavoritesLogic()
+    // para guardar datos enriquecidos en localStorage
+    // y que "Control de Animes" pueda mostrar el poster,
+    // filtrar por temporada/año y asignar watchStatus.
+    // --------------------------------------------------
+    article.setAttribute('data-poster', anime.poster || '');
+
+    // Extraer estación y año desde seasonId (ej: "fall_2025")
+    const seasonParts = (anime.seasonId || '').split('_');
+    const seasonKey   = seasonParts[0] || '';                  // "fall" | "winter" | ...
+    const seasonYear  = seasonParts[seasonParts.length - 1] || ''; // "2025"
+
+    article.setAttribute('data-season', seasonKey);
+    article.setAttribute('data-year',   seasonYear);
+
     const trailersHtml = (anime.trailers || [])
         .map(url => {
             if (url.includes('/shorts/')) return '';
@@ -142,7 +158,21 @@ const createAnimeCard = (anime) => {
         <div class="details">
             <p><strong>Título:</strong> ${anime.title}</p>
             <p><strong>Sinopsis:</strong> ${anime.synopsis || 'Sin descripción disponible.'}</p>
-            <button class="fav-btn" data-id="${anime.id}">Agregar a Favoritos</button>
+            <!-- Botón de favoritos dinámico con selector de estado inline -->
+            <div class="fav-btn-wrapper" data-id="${anime.id}">
+              <button class="fav-btn fav-btn--main" data-id="${anime.id}">
+                <span class="fav-btn__icon">☆</span>
+                <span class="fav-btn__label">Agregar a Mi Lista</span>
+              </button>
+              <!-- Dropdown de estados (oculto por defecto) -->
+              <div class="fav-status-picker" data-id="${anime.id}">
+                <p class="fav-status-picker__title">Selecciona Estado</p>
+                <button class="fav-status-option" data-status="watching"  data-id="${anime.id}">👀 Viendo</button>
+                <button class="fav-status-option" data-status="pending"   data-id="${anime.id}">⏳ Pendiente</button>
+                <button class="fav-status-option" data-status="completed" data-id="${anime.id}">✅ Finalizado</button>
+                <button class="fav-status-option fav-status-option--remove" data-status="remove" data-id="${anime.id}">🗑️ Quitar de Mi Lista</button>
+              </div>
+            </div>
             <div class="trailers">
                 ${trailersHtml}
             </div>
@@ -188,42 +218,136 @@ const initCarousels = () => {
     });
 };
 
-// 2. FAVORITOS
+// 2. FAVORITOS — Sistema dinámico con selector de estado
+// -------------------------------------------------------
+// Cada tarjeta tiene:
+//   .fav-btn-wrapper   → contenedor que agrupa botón + picker
+//   .fav-btn--main     → botón principal (Agregar / estado activo)
+//   .fav-status-picker → dropdown inline con las opciones
+//   .fav-status-option → cada opción de estado
+// -------------------------------------------------------
+
+/** Configuración de estados: clave → { label, icon, css } */
+const STATUS_MAP = {
+    watching:  { label: 'Viendo',    icon: '👀', css: 'watching'  },
+    pending:   { label: 'Pendiente', icon: '⏳', css: 'pending'   },
+    completed: { label: 'Finalizado',icon: '✅', css: 'completed' }
+};
+
+/**
+ * Actualiza el aspecto visual del botón principal
+ * según si el anime está en favoritos y su watchStatus.
+ * @param {HTMLElement} mainBtn  - .fav-btn--main
+ * @param {string|null} status   - watchStatus actual o null si no está en favoritos
+ */
+const applyBtnState = (mainBtn, status) => {
+    const iconEl  = mainBtn.querySelector('.fav-btn__icon');
+    const labelEl = mainBtn.querySelector('.fav-btn__label');
+
+    // Limpiar clases de estado previas
+    Object.values(STATUS_MAP).forEach(s => mainBtn.classList.remove('fav-btn--' + s.css));
+    mainBtn.classList.remove('fav-btn--active');
+
+    if (status && STATUS_MAP[status]) {
+        const cfg = STATUS_MAP[status];
+        mainBtn.classList.add('fav-btn--active', 'fav-btn--' + cfg.css);
+        iconEl.textContent  = cfg.icon;
+        labelEl.textContent = cfg.label;
+    } else {
+        iconEl.textContent  = '☆';
+        labelEl.textContent = 'Agregar a Mi Lista';
+    }
+};
+
+/**
+ * Cierra todos los pickers abiertos excepto el indicado.
+ * @param {string} [exceptId]  - ID del picker que debe quedar abierto
+ */
+const closeAllPickers = (exceptId) => {
+    document.querySelectorAll('.fav-status-picker.open').forEach(p => {
+        if (p.dataset.id !== exceptId) p.classList.remove('open');
+    });
+};
+
+/**
+ * Inicializa la lógica de favoritos en todas las tarjetas renderizadas.
+ * Se llama desde renderSeasonAnimes() después de crear el DOM.
+ */
 const initFavoritesLogic = () => {
-    const favButtons = document.querySelectorAll('.fav-btn');
-    
-    const updateFavButtons = () => {
-        favButtons.forEach(btn => {
-            const id = btn.dataset.id;
-            const isFavorite = favorites.some(fav => fav.id === id);
-            btn.classList.toggle('active', isFavorite);
-            btn.textContent = isFavorite ? 'En Favoritos ★' : 'Agregar a Favoritos';
+
+    // Actualizar estado visual de todos los botones al iniciar
+    const updateAllButtons = () => {
+        document.querySelectorAll('.fav-btn--main').forEach(mainBtn => {
+            const id  = mainBtn.dataset.id;
+            const fav = favorites.find(f => f.id === id);
+            applyBtnState(mainBtn, fav ? fav.watchStatus : null);
         });
     };
 
-    favButtons.forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
+    // ── Botón principal: abre/cierra el picker ──
+    document.querySelectorAll('.fav-btn--main').forEach(mainBtn => {
+        mainBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id     = mainBtn.dataset.id;
+            const picker = document.querySelector(`.fav-status-picker[data-id="${id}"]`);
+            if (!picker) return;
 
-        newBtn.addEventListener('click', () => {
-            const id = newBtn.dataset.id;
-            const card = newBtn.closest('.anime-card');
-            const title = card ? card.dataset.title : id;
+            const isOpen = picker.classList.contains('open');
+            // Cerrar cualquier otro picker abierto
+            document.querySelectorAll('.fav-status-picker.open').forEach(p => {
+                if (p !== picker) p.classList.remove('open');
+            });
+            picker.classList.toggle('open', !isOpen);
+        });
+    });
 
-            const favIndex = favorites.findIndex(fav => fav.id === id);
-            if (favIndex !== -1) {
-                favorites.splice(favIndex, 1);
+    // ── Opciones del picker: guardar estado o eliminar ──
+    document.querySelectorAll('.fav-status-option').forEach(optBtn => {
+        optBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id      = optBtn.dataset.id;
+            const status  = optBtn.dataset.status;
+            const card    = optBtn.closest('.anime-card');
+            const picker  = document.querySelector(`.fav-status-picker[data-id="${id}"]`);
+            const mainBtn = document.querySelector(`.fav-btn--main[data-id="${id}"]`);
+
+            if (status === 'remove') {
+                const idx = favorites.findIndex(f => f.id === id);
+                if (idx !== -1) favorites.splice(idx, 1);
             } else {
-                favorites.push({ id, title });
+                const existing = favorites.find(f => f.id === id);
+                if (existing) {
+                    existing.watchStatus = status;
+                } else {
+                    favorites.push({
+                        id,
+                        title:       card ? card.dataset.title  : id,
+                        poster:      card ? card.dataset.poster : '',
+                        season:      card ? card.dataset.season : '',
+                        year:        card ? card.dataset.year   : '',
+                        watchStatus: status
+                    });
+                }
             }
-            
+
             localStorage.setItem('favorites', JSON.stringify(favorites));
-            updateFavButtons();
+            const fav = favorites.find(f => f.id === id);
+            applyBtnState(mainBtn, fav ? fav.watchStatus : null);
+            picker.classList.remove('open');
             renderFavoritesList();
         });
     });
 
-    updateFavButtons();
+    // ── Cerrar picker al clic fuera — usando closest() en fase de burbuja
+    // NO usamos capture:true para no interferir con stopPropagation() del botón.
+    document.addEventListener('click', (e) => {
+        // Si el clic NO fue dentro de ningún .fav-btn-wrapper, cerrar todos
+        if (!e.target.closest('.fav-btn-wrapper')) {
+            closeAllPickers();
+        }
+    });
+
+    updateAllButtons();
 };
 
 const renderFavoritesList = () => {

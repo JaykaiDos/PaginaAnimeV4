@@ -1,6 +1,13 @@
 /* ============================================
    ANIME DETAILS - JAVASCRIPT
    Autor: Jaykai2
+   
+   CAMBIOS v2:
+   - toggleFavorite() guarda poster, temporada y año
+     para que "Control de Animes" pueda filtrar y mostrar
+     la imagen de cada anime.
+   - Botón "Volver a mi lista" detecta si el usuario
+     llegó desde my-list.html y lo retorna ahí.
    ============================================ */
 
 // Estado de la aplicación
@@ -60,17 +67,26 @@ const loadAnimeFromFirebase = async (animeId) => {
     const seasons = await window.firebaseService.getAllSeasons();
     const season = seasons.find(s => s.id === anime.seasonId);
     
+    // -----------------------------------------------
+    // Extraer año desde el seasonId (ej: "fall_2025")
+    // o desde un campo "year" si existe en Firestore.
+    // -----------------------------------------------
+    const seasonParts = anime.seasonId ? anime.seasonId.split('_') : [];
+    const seasonYear  = seasonParts.length >= 2 ? seasonParts[seasonParts.length - 1] : null;
+    const seasonName  = seasonParts.length >= 1 ? seasonParts[0] : 'fall'; // "fall", "winter"...
+    
     // Transformar al formato esperado
     currentAnime = {
-      id: anime.id,
-      title: anime.title,
-      season: anime.seasonId ? anime.seasonId.split('_')[0] : 'fall',
+      id:         anime.id,
+      title:      anime.title,
+      season:     seasonName,
       seasonName: season ? season.name : 'Temporada',
-      poster: anime.poster,
-      synopsis: anime.synopsis,
-      episodes: anime.totalEpisodes || 0,
-      status: anime.status === 'airing' ? 'En emisión' : 'Finalizado',
-      trailers: anime.trailers || []
+      year:       anime.year || seasonYear || null,
+      poster:     anime.poster || '',
+      synopsis:   anime.synopsis,
+      episodes:   anime.totalEpisodes || 0,
+      status:     anime.status === 'airing' ? 'En emisión' : 'Finalizado',
+      trailers:   anime.trailers || []
     };
     
     return currentAnime;
@@ -107,10 +123,10 @@ const loadEpisodesFromFirebase = async (animeId) => {
     
     // Transformar al formato esperado
     currentEpisodes = episodes.map(ep => ({
-      number: ep.episodeNumber,
-      title: ep.title,
+      number:   ep.episodeNumber,
+      title:    ep.title,
       duration: ep.duration,
-      videoUrl: ep.videoUrl // Importante: guardar la URL del video
+      videoUrl: ep.videoUrl
     }));
     
     // Ordenar por número de episodio
@@ -127,9 +143,45 @@ const loadEpisodesFromFirebase = async (animeId) => {
 };
 
 // ============================================
+// DETECTAR URL DE RETORNO (para el botón "Volver")
+// ============================================
+
+/**
+ * Devuelve el href del botón "Volver".
+ * Si el referrer es my-list.html, regresa ahí;
+ * de lo contrario regresa a la búsqueda.
+ * @returns {string}
+ */
+const getBackUrl = () => {
+  try {
+    const ref = document.referrer;
+    if (ref && ref.includes('my-list.html')) {
+      return 'my-list.html';
+    }
+  } catch (_) { /* referrer no disponible en algunos contextos */ }
+  return 'search.html';
+};
+
+/**
+ * Label del botón "Volver" según la página de origen.
+ * @returns {string}
+ */
+const getBackLabel = () => {
+  try {
+    if (document.referrer && document.referrer.includes('my-list.html')) {
+      return '← Volver a mi lista';
+    }
+  } catch (_) { /* sin acceso a referrer */ }
+  return '← Volver a Búsqueda';
+};
+
+// ============================================
 // RENDERIZAR DETALLES DEL ANIME
 // ============================================
 const renderAnimeDetails = (anime) => {
+  const backUrl   = getBackUrl();
+  const backLabel = getBackLabel();
+
   animeDetails.innerHTML = `
     <div class="details-hero">
       <img src="${anime.poster}" alt="${anime.title}" class="anime-poster" onerror="this.src='https://via.placeholder.com/400x550?text=Sin+Imagen'">
@@ -155,6 +207,10 @@ const renderAnimeDetails = (anime) => {
           <button class="action-btn btn-secondary" id="favBtn" onclick="toggleFavorite()">
             ⭐ Agregar a Favoritos
           </button>
+          <!-- Botón de retorno contextual -->
+          <a href="${backUrl}" class="action-btn btn-back">
+            ${backLabel}
+          </a>
         </div>
       </div>
     </div>
@@ -259,18 +315,27 @@ window.playFirstEpisode = () => {
 };
 
 // ============================================
-// TOGGLE FAVORITO
+// TOGGLE FAVORITO (MEJORADO)
+// Ahora guarda: poster, temporada, año y estado inicial
+// para que "Control de Animes" los pueda usar.
 // ============================================
 window.toggleFavorite = () => {
   let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
   const favIndex = favorites.findIndex(fav => fav.id === currentAnime.id);
 
   if (favIndex !== -1) {
+    /* Ya está en favoritos → eliminar */
     favorites.splice(favIndex, 1);
   } else {
-    favorites.push({ 
-      id: currentAnime.id, 
-      title: currentAnime.title 
+    /* No está → agregar con datos enriquecidos */
+    favorites.push({
+      id:          currentAnime.id,
+      title:       currentAnime.title,
+      poster:      currentAnime.poster || '',
+      season:      currentAnime.season || '',      // "fall", "winter"...
+      seasonName:  currentAnime.seasonName || '',  // "Otoño 2025"
+      year:        currentAnime.year || null,      // 2025
+      watchStatus: 'pending'                       // estado inicial: Pendiente
     });
   }
 

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Animes - Anime Hub</title>
+  <link rel="stylesheet" href="../styles/my-list.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="main-header">
+    <nav class="breadcrumb">
+      <a href="../index.html">🏠 Hub</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="current">🗂️ Control de Animes</span>
+    </nav>
+  </header>
+
+  <!-- HERO / TITULO -->
+  <section class="list-hero">
+    <div class="hero-inner">
+      <h1 class="hero-title">🗂️ Control de Animes</h1>
+      <p class="hero-subtitle">Tu central de mando personal</p>
+    </div>
+  </section>
+
+  <!-- BARRA DE HERRAMIENTAS -->
+  <section class="toolbar-section">
+    <div class="container">
+      <div class="toolbar">
+
+        <!-- Buscador dinámico -->
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="Buscar anime por nombre..."
+            maxlength="100"
+            autocomplete="off"
+          >
+          <!-- Botón limpiar búsqueda -->
+          <button class="clear-btn" id="clearSearchBtn" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">✕</button>
+        </div>
+
+        <!-- Filtros Dropdown -->
+        <div class="filters-group">
+
+          <!-- Filtro: Estado -->
+          <div class="filter-item">
+            <label for="statusFilter" class="filter-label">Estado</label>
+            <select id="statusFilter" class="filter-select">
+              <option value="all">Todos</option>
+              <option value="watching">Viendo</option>
+              <option value="pending">Pendiente</option>
+              <option value="completed">Finalizado</option>
+            </select>
+          </div>
+
+          <!-- Filtro: Año -->
+          <div class="filter-item">
+            <label for="yearFilter" class="filter-label">Año</label>
+            <select id="yearFilter" class="filter-select">
+              <option value="all">Todos</option>
+              <!-- Opciones generadas dinámicamente por JS -->
+            </select>
+          </div>
+
+          <!-- Filtro: Estación -->
+          <div class="filter-item">
+            <label for="seasonFilter" class="filter-label">Temporada</label>
+            <select id="seasonFilter" class="filter-select">
+              <option value="all">Todas</option>
+              <option value="winter">❄️ Invierno</option>
+              <option value="spring">🌸 Primavera</option>
+              <option value="summer">☀️ Verano</option>
+              <option value="fall">🍂 Otoño</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Contador de resultados -->
+        <div class="results-counter" id="resultsCounter">
+          Mostrando <strong id="countVisible">0</strong> de <strong id="countTotal">0</strong> animes
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- GRID DE ANIMES -->
+  <section class="list-section">
+    <div class="container">
+
+      <!-- Estado vacío (sin favoritos) -->
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">📭</div>
+        <h2>Tu lista está vacía</h2>
+        <p>Explora las temporadas y agrega animes a tu lista con el botón <strong>⭐ Agregar a Favoritos</strong>.</p>
+        <a href="../index.html" class="btn-go-explore">🚀 Explorar Temporadas</a>
+      </div>
+
+      <!-- Estado sin resultados de filtro -->
+      <div class="empty-state" id="noResultsState" style="display: none;">
+        <div class="empty-icon">🔎</div>
+        <h2>Sin resultados</h2>
+        <p>Ningún anime coincide con tu búsqueda o filtros actuales.</p>
+        <button class="btn-go-explore" id="clearFiltersBtn">🗑️ Limpiar Filtros</button>
+      </div>
+
+      <!-- Grid de tarjetas -->
+      <div class="anime-grid" id="animeGrid">
+        <!-- Tarjetas generadas dinámicamente por JS -->
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="main-footer">
+    <p class="credit">✨ Hecho por Jaykai2 ✨</p>
+    <p>&copy; 2025 Anime Hub. Todos los derechos reservados.</p>
+    <p><a href="../index.html" class="footer-link">← Volver al Hub Principal</a></p>
+  </footer>
+
+  <!-- TOAST DE NOTIFICACIONES -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+  <!-- Firebase Config y Services -->
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/firebase-service.js"></script>
+
+  <!-- Script de Control de Animes -->
+  <script src="../js/my-list.js"></script>
+
+</body>
+</html>

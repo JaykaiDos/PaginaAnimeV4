@@ -479,3 +479,33 @@ footer p {
 html {
   scroll-behavior: smooth;
 }
+
+/* ============================================
+   ANIME DETAILS - PATCH v2
+   Nuevo botón btn-back para "Volver a mi lista"
+   ============================================ */
+
+/* Botón de retorno contextual */
+.btn-back {
+  display: inline-block;
+  text-decoration: none;
+  background: rgba(72, 202, 228, 0.10);
+  border: 2px solid #48cae440;
+  color: #48cae4;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-back:hover {
+  background: rgba(72, 202, 228, 0.20);
+  border-color: #48cae4;
+  box-shadow: 0 0 18px rgba(72, 202, 228, 0.30);
+  transform: translateY(-2px);
+}

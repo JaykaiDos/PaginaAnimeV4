@@ -43,36 +43,102 @@ const loadSeasonsFromFirebase = async () => {
     
     console.log('📊 Temporadas con contadores:', seasonsWithCounts);
     
-    // Renderizar temporadas
-    seasonsGrid.innerHTML = seasonsWithCounts.map(season => {
-      const seasonKey = season.id.split('_')[0]; 
-      const seasonClass = seasonClasses[seasonKey] || 'fall';
-      const seasonPage = `pages/${season.period}.html`; 
-      
-      return `
-        <article class="season-card ${seasonClass}">
-          <div class="season-icon">${season.emoji || '📅'}</div>
-          <div class="season-content">
-            <h3 class="season-name">${season.name}</h3>
-            <p class="season-period">${season.period}</p>
-            <div class="season-stats">
-              <span class="anime-count">${season.animeCount} Animes</span>
-              <span class="status-badge ${season.status === 'active' ? 'active' : 'completed'}">
-                ${season.status === 'active' ? 'Activo' : 'Finalizado'}
-              </span>
+    // -----------------------------------------------
+    // AGRUPAR TEMPORADAS POR AÑO
+    // El campo season.period tiene el formato "fall-2025",
+    // "winter-2026", etc. Extraemos el año del último
+    // segmento separado por guión.
+    // -----------------------------------------------
+
+    /**
+     * Extrae el año de un period string (ej: "fall-2025" → 2025).
+     * @param {string} period
+     * @returns {number}
+     */
+    const extractYear = (period) => {
+      const parts = (period || '').split('-');
+      const year  = parseInt(parts[parts.length - 1]);
+      return isNaN(year) ? 0 : year;
+    };
+
+    /**
+     * Extrae la clave de estación de un period string (ej: "fall-2025" → "fall").
+     * @param {string} period
+     * @returns {string}
+     */
+    const extractSeason = (period) => (period || '').split('-')[0] || 'fall';
+
+    // Agrupar en un Map { año → [temporadas] }, ordenado descendente por año
+    const byYear = new Map();
+    seasonsWithCounts.forEach(season => {
+      const year = extractYear(season.period);
+      if (!byYear.has(year)) byYear.set(year, []);
+      byYear.get(year).push(season);
+    });
+
+    // Ordenar años de mayor a menor (2026 primero, luego 2025…)
+    const sortedYears = [...byYear.keys()].sort((a, b) => b - a);
+
+    // Orden deseado dentro de cada año
+    const SEASON_ORDER = { winter: 0, spring: 1, summer: 2, fall: 3 };
+
+    // Construir el HTML agrupado
+    let html = '';
+
+    sortedYears.forEach(year => {
+      const group = byYear.get(year);
+
+      // Ordenar temporadas dentro del año: invierno → primavera → verano → otoño
+      group.sort((a, b) => {
+        const keyA = SEASON_ORDER[extractSeason(a.period)] ?? 99;
+        const keyB = SEASON_ORDER[extractSeason(b.period)] ?? 99;
+        return keyA - keyB;
+      });
+
+      // Encabezado del grupo de año
+      html += `<div class="year-group-header">
+        <span class="year-label">${year}</span>
+        <span class="year-divider"></span>
+      </div>`;
+
+      // Grid de tarjetas del año
+      html += '<div class="year-seasons-grid">';
+
+      group.forEach(season => {
+        const seasonKey   = extractSeason(season.period);
+        const seasonClass = seasonClasses[seasonKey] || 'fall';
+        const seasonPage  = `pages/${season.period}.html`;
+
+        html += `
+          <article class="season-card ${seasonClass}">
+            <div class="season-icon">${season.emoji || '📅'}</div>
+            <div class="season-content">
+              <h3 class="season-name">${season.name}</h3>
+              <p class="season-period">${season.period}</p>
+              <div class="season-stats">
+                <span class="anime-count">${season.animeCount} Animes</span>
+                <span class="status-badge ${season.status === 'active' ? 'active' : 'completed'}">
+                  ${season.status === 'active' ? 'Activo' : 'Finalizado'}
+                </span>
+              </div>
+              <p class="season-description">
+                ${season.status === 'active'
+                  ? 'Temporada actualmente en emisión'
+                  : 'Temporada finalizada'}
+              </p>
+              <a href="${seasonPage}" class="season-btn">
+                Ver Animes
+                <span class="arrow">→</span>
+              </a>
             </div>
-            <p class="season-description">
-              ${season.status === 'active' ? 'Temporada actual con los estrenos más esperados' : 'Revive los mejores animes de esta temporada'}
-            </p>
-            
-            <a href="${seasonPage}" class="season-btn">
-              Ver Animes
-              <span class="arrow">→</span>
-            </a>
-          </div>
-        </article>
-      `;
-    }).join('');
+          </article>
+        `;
+      });
+
+      html += '</div>'; // cierra .year-seasons-grid
+    });
+
+    seasonsGrid.innerHTML = html;
     
     // Actualizar estadísticas globales
     updateGlobalStats(seasonsWithCounts);
