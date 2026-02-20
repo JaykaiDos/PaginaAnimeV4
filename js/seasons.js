@@ -113,13 +113,17 @@ const createAnimeCard = (anime) => {
     // --------------------------------------------------
     article.setAttribute('data-poster', anime.poster || '');
 
-    // Extraer estación y año desde seasonId (ej: "fall_2025")
-    const seasonParts = (anime.seasonId || '').split('_');
-    const seasonKey   = seasonParts[0] || '';                  // "fall" | "winter" | ...
-    const seasonYear  = seasonParts[seasonParts.length - 1] || ''; // "2025"
-
-    article.setAttribute('data-season', seasonKey);
-    article.setAttribute('data-year',   seasonYear);
+    // --------------------------------------------------
+    // season → del nombre del archivo HTML actual.
+    //   "winter-2026.html" → "winter", "fall-2025.html" → "fall"
+    //   Esto evita depender de anime.seasonId que es un ID
+    //   opaco de Firestore (ej: "glrlCdE969CdT1p8bPVJ").
+    // year   → campo directo del anime en Firestore (ej: 2026)
+    // --------------------------------------------------
+    const _pageFile  = window.location.pathname.split('/').pop();
+    const _seasonKey = _pageFile.split('-')[0] || '';
+    article.setAttribute('data-season', _seasonKey);
+    article.setAttribute('data-year',   anime.year || '');
 
     const trailersHtml = (anime.trailers || [])
         .map(url => {

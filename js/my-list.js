@@ -89,6 +89,57 @@ const readFavorites = () => {
 };
 
 /**
+ * Migra entradas antiguas del localStorage que tienen el ID de Firestore
+ * como valor de season (ej: "glrlCdE969CdT1p8bPVJ") en vez de la clave
+ * legible ("fall" | "winter" | "spring" | "summer").
+ *
+ * Causa raíz: versiones previas de seasons.js usaban anime.seasonId
+ * (ID opaco de Firestore) en lugar del nombre del archivo HTML.
+ *
+ * La migración detecta valores inválidos por longitud y caracteres,
+ * y los reemplaza por cadena vacía (que my-list oculta silenciosamente).
+ *
+ * @param {Array<Object>} list
+ * @returns {Array<Object>} lista con campos season/year saneados
+ */
+const migrateCorruptedFavorites = (list) => {
+  const VALID_SEASONS = new Set(['fall', 'winter', 'spring', 'summer']);
+
+  let dirty = false;
+  const migrated = list.map(fav => {
+    const copy = { ...fav };
+
+    // season inválida: no es una de las 4 claves conocidas
+    if (copy.season && !VALID_SEASONS.has(copy.season)) {
+      console.warn(`🔧 Migrando season corrupta: "${copy.season}" → "" (id: ${copy.id})`);
+      copy.season = '';
+      dirty = true;
+    }
+
+    // year inválido: no es un número de 4 dígitos
+    if (copy.year && !/^\d{4}$/.test(String(copy.year))) {
+      console.warn(`🔧 Migrando year corrupto: "${copy.year}" → "" (id: ${copy.id})`);
+      copy.year = '';
+      dirty = true;
+    }
+
+    return copy;
+  });
+
+  // Solo escribir al localStorage si hubo cambios
+  if (dirty) {
+    try {
+      localStorage.setItem('favorites', JSON.stringify(migrated));
+      console.log('✅ Migración completada: localStorage actualizado');
+    } catch (e) {
+      console.error('❌ Error al guardar migración:', e);
+    }
+  }
+
+  return migrated;
+};
+
+/**
  * Persiste la lista actual de favoritos en localStorage.
  * @param {Array<Object>} list
  */
@@ -509,8 +560,8 @@ const showToast = (message, type = 'info', duration = 3000) => {
 const init = () => {
   resolveDOMRefs();
 
-  /* Cargar datos */
-  state.favorites = readFavorites();
+  /* Cargar datos y migrar entradas corruptas del localStorage */
+  state.favorites = migrateCorruptedFavorites(readFavorites());
 
   /* Poblar filtro de años con los datos reales */
   populateYearFilter();
