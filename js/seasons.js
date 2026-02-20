@@ -410,16 +410,27 @@ searchBar?.addEventListener('input', () => {
 });
 
 // 4. DARK MODE
+// ──────────────────────────────────────────────────────────
+// Activa/desactiva la clase .dark-mode en el <body>.
+// El archivo dark-mode.css contiene todos los overrides.
+// ──────────────────────────────────────────────────────────
 const darkModeToggle = document.getElementById('darkModeToggle');
 const body = document.body;
 
+/**
+ * Aplica o remueve el modo oscuro.
+ * @param {boolean} isOn - true para activar modo oscuro
+ */
 const applyDarkMode = (isOn) => {
-    body.style.filter = isOn ? 'invert(1) hue-rotate(180deg)' : '';
-    if (darkModeToggle) darkModeToggle.textContent = isOn ? 'Modo Normal' : 'Modo Alternativo';
+    body.classList.toggle('dark-mode', isOn);
+    if (darkModeToggle) {
+        darkModeToggle.textContent = isOn ? 'Modo Normal' : 'Modo Oscuro';
+        darkModeToggle.classList.toggle('dark-active', isOn);
+    }
 };
 
 darkModeToggle?.addEventListener('click', () => {
-    const isNowOn = body.style.filter === '';
+    const isNowOn = !body.classList.contains('dark-mode');
     applyDarkMode(isNowOn);
     localStorage.setItem('darkMode', isNowOn ? 'on' : 'off');
 });

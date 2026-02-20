@@ -1,0 +1,318 @@
+/* ============================================================
+   DARK MODE — Anime Hub
+   Archivo: dark-mode.css
+
+   Propósito:
+   Se activa agregando la clase .dark-mode al <body>.
+   Sobreescribe los colores de todos los temas de temporada
+   (fall, winter, spring, summer) con una paleta oscura
+   refinada en negro, gris carbón y gris plata, conservando
+   un tenue acento del color original de la temporada para
+   mantener la identidad visual.
+
+   Estructura:
+   1. Variables base del tema oscuro
+   2. Layout y body
+   3. Header y navegación
+   4. Controles (buscador, botón dark)
+   5. Tarjetas de anime
+   6. Carrusel
+   7. Panel de detalles
+   8. Botón de favoritos + picker
+   9. Trailers
+   10. Sección de favoritos lateral
+   11. Footer
+   12. Animaciones preservadas
+   ============================================================ */
+
+/* ── 1. VARIABLES BASE ──────────────────────────────────────
+   Definidas en :root para que cascade correctamente
+   cuando body tiene .dark-mode                            */
+body.dark-mode {
+  /* Fondos */
+  --dm-bg-base:        #0a0a0a;
+  --dm-bg-surface:     #111111;
+  --dm-bg-elevated:    #1a1a1a;
+  --dm-bg-card:        #141414;
+  --dm-bg-overlay:     rgba(0, 0, 0, 0.85);
+
+  /* Texto */
+  --dm-text-primary:   #e8e8e8;
+  --dm-text-secondary: #a0a0a0;
+  --dm-text-muted:     #555555;
+  --dm-text-heading:   #f0f0f0;
+
+  /* Bordes */
+  --dm-border:         rgba(255, 255, 255, 0.08);
+  --dm-border-hover:   rgba(255, 255, 255, 0.18);
+
+  /* Acentos — gris plata neutro + toque cromático suave */
+  --dm-accent:         #c0c0c0;
+  --dm-accent-glow:    rgba(192, 192, 192, 0.15);
+  --dm-accent-dim:     rgba(192, 192, 192, 0.08);
+}
+
+/* ── 2. LAYOUT Y BODY ───────────────────────────────────── */
+body.dark-mode {
+  background-color: var(--dm-bg-base) !important;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(30, 30, 30, 0.8) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(20, 20, 20, 0.6) 0%, transparent 50%) !important;
+  color: var(--dm-text-primary) !important;
+}
+
+/* ── 3. HEADER ──────────────────────────────────────────── */
+body.dark-mode header {
+  border-bottom-color: var(--dm-border) !important;
+}
+
+body.dark-mode h1 {
+  color: var(--dm-text-heading) !important;
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.12),
+    0 0 20px rgba(255, 255, 255, 0.06) !important;
+  animation: none !important; /* suspender glow animado */
+}
+
+body.dark-mode .season-subtitle,
+body.dark-mode .main-nav a,
+body.dark-mode .footer-link {
+  color: var(--dm-text-secondary) !important;
+  text-shadow: none !important;
+}
+
+/* ── 4. CONTROLES ───────────────────────────────────────── */
+body.dark-mode #searchBar {
+  background-color: var(--dm-bg-elevated) !important;
+  border-color: var(--dm-border) !important;
+  color: var(--dm-text-primary) !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode #searchBar:focus {
+  border-color: var(--dm-accent) !important;
+  box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.1) !important;
+}
+
+body.dark-mode #searchBar::placeholder {
+  color: var(--dm-text-muted) !important;
+}
+
+body.dark-mode #darkModeToggle {
+  background-color: var(--dm-bg-elevated) !important;
+  border-color: var(--dm-accent) !important;
+  color: var(--dm-accent) !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode #darkModeToggle:hover {
+  background-color: var(--dm-accent) !important;
+  color: var(--dm-bg-base) !important;
+  box-shadow: 0 0 12px var(--dm-accent-glow) !important;
+}
+
+/* ── 5. TARJETAS DE ANIME ───────────────────────────────── */
+body.dark-mode .anime-card {
+  background: linear-gradient(
+    135deg,
+    var(--dm-bg-card) 0%,
+    var(--dm-bg-elevated) 100%
+  ) !important;
+  border-color: var(--dm-border) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+body.dark-mode .anime-card:hover {
+  border-color: var(--dm-border-hover) !important;
+  box-shadow:
+    0 0 20px rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.8) !important;
+  transform: translateY(-6px) !important;
+}
+
+body.dark-mode .section-title {
+  color: var(--dm-text-heading) !important;
+  text-shadow: none !important;
+  border-top-color: var(--dm-border) !important;
+  border-bottom-color: var(--dm-border) !important;
+}
+
+/* ── 6. CARRUSEL ────────────────────────────────────────── */
+body.dark-mode .carousel-container {
+  border-color: var(--dm-border-hover) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.dark-mode .prev,
+body.dark-mode .next {
+  background: rgba(30, 30, 30, 0.9) !important;
+  color: var(--dm-text-primary) !important;
+  border: 1px solid var(--dm-border) !important;
+}
+
+body.dark-mode .prev:hover,
+body.dark-mode .next:hover {
+  background: rgba(60, 60, 60, 0.95) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 7. PANEL DE DETALLES ───────────────────────────────── */
+body.dark-mode .details {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-color: var(--dm-border) !important;
+}
+
+body.dark-mode .details p {
+  color: var(--dm-text-primary) !important;
+}
+
+body.dark-mode .details strong {
+  color: var(--dm-accent) !important;
+  text-shadow: none !important;
+}
+
+/* ── 8. BOTÓN DE FAVORITOS + PICKER ─────────────────────── */
+body.dark-mode .fav-btn--main {
+  background: var(--dm-bg-elevated) !important;
+  border-color: var(--dm-border-hover) !important;
+  color: var(--dm-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .fav-btn--main:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--dm-accent) !important;
+  color: var(--dm-accent) !important;
+  box-shadow: 0 0 12px var(--dm-accent-glow) !important;
+}
+
+/* Estados activos en dark mode — colores más saturados para legibilidad */
+body.dark-mode .fav-btn--main.fav-btn--watching {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border-color: #22c55e !important;
+  color: #22c55e !important;
+}
+body.dark-mode .fav-btn--main.fav-btn--pending {
+  background: rgba(234, 179, 8, 0.12) !important;
+  border-color: #eab308 !important;
+  color: #eab308 !important;
+}
+body.dark-mode .fav-btn--main.fav-btn--completed {
+  background: rgba(96, 165, 250, 0.12) !important;
+  border-color: #60a5fa !important;
+  color: #60a5fa !important;
+}
+
+/* Picker en dark mode */
+body.dark-mode .fav-status-picker {
+  background: rgba(10, 10, 10, 0.98) !important;
+  border-color: var(--dm-border-hover) !important;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+}
+
+body.dark-mode .fav-status-picker::before {
+  background: rgba(10, 10, 10, 0.98) !important;
+  border-color: var(--dm-border-hover) !important;
+}
+
+body.dark-mode .fav-status-picker__title {
+  color: var(--dm-text-muted) !important;
+  border-bottom-color: var(--dm-border) !important;
+}
+
+body.dark-mode .fav-status-option {
+  color: var(--dm-text-secondary) !important;
+}
+
+/* ── 9. TRAILERS ────────────────────────────────────────── */
+body.dark-mode .trailers {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  border-color: var(--dm-border) !important;
+}
+
+body.dark-mode iframe {
+  border-color: var(--dm-border-hover) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+body.dark-mode iframe:hover {
+  border-color: var(--dm-accent) !important;
+  box-shadow:
+    0 0 16px var(--dm-accent-glow),
+    0 4px 20px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* ── 10. SECCIÓN FAVORITOS LATERAL ─────────────────────── */
+body.dark-mode .favorites {
+  background-color: var(--dm-bg-surface) !important;
+  border-color: var(--dm-border) !important;
+}
+
+body.dark-mode .favorites h2 {
+  color: var(--dm-text-heading) !important;
+  text-shadow: none !important;
+}
+
+body.dark-mode #clearFavoritesBtn {
+  background-color: var(--dm-bg-elevated) !important;
+  border-color: var(--dm-border-hover) !important;
+  color: var(--dm-text-secondary) !important;
+}
+
+body.dark-mode #clearFavoritesBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--dm-text-primary) !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .fav-list {
+  color: var(--dm-text-secondary) !important;
+}
+
+body.dark-mode .fav-list.none {
+  color: var(--dm-text-muted) !important;
+}
+
+body.dark-mode .fav-list li {
+  border-bottom-color: var(--dm-border) !important;
+}
+
+body.dark-mode .fav-list li:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* ── 11. FOOTER ─────────────────────────────────────────── */
+body.dark-mode footer {
+  border-top-color: var(--dm-border) !important;
+  color: var(--dm-text-muted) !important;
+}
+
+body.dark-mode footer .credit {
+  color: var(--dm-text-secondary) !important;
+  text-shadow: none !important;
+}
+
+body.dark-mode .footer-link {
+  background: var(--dm-bg-elevated) !important;
+  border-color: var(--dm-border) !important;
+  color: var(--dm-text-secondary) !important;
+}
+
+body.dark-mode .footer-link:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--dm-accent) !important;
+  color: var(--dm-accent) !important;
+  box-shadow: none !important;
+}
+
+/* ── 12. TRANSICIÓN SUAVE AL ACTIVAR ────────────────────── */
+body.dark-mode,
+body.dark-mode *:not(iframe):not(img):not(video) {
+  transition:
+    background-color 0.35s ease,
+    border-color     0.35s ease,
+    color            0.25s ease,
+    box-shadow       0.35s ease !important;
+}
