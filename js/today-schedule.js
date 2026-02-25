@@ -224,14 +224,34 @@ const filterAnimesForToday = (hubAnimes) => {
 // -----------------------------------------------
 
 /**
- * Convierte el horario de broadcast al timezone local del
- * usuario para mostrar en las cards.
- * Reutiliza broadcastToUTC() para garantizar consistencia.
+ * Convierte el horario de broadcast al timezone local del usuario.
+ *
+ * Prioridad:
+ *  1. broadcast.airingAt (Unix timestamp de AniList) → conversión directa, exacta
+ *  2. broadcast.day + time (MAL/Jikan) → cálculo via broadcastToUTC()
  *
  * @param {object} broadcast
  * @returns {string} - e.g. "21:00 (GMT-3)"
  */
 const convertBroadcastToLocal = (broadcast) => {
+  // ✅ Prioridad 1: timestamp exacto de AniList (sin cálculos de offset)
+  if (broadcast?.airingAt) {
+    try {
+      const date = new Date(broadcast.airingAt * 1000);
+
+      const localTime = date.toLocaleTimeString('es-ES', {
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      const tzName = new Intl.DateTimeFormat('es-ES', { timeZoneName: 'short' })
+        .formatToParts(date)
+        .find(p => p.type === 'timeZoneName')?.value ?? '';
+
+      return `${localTime} (${tzName})`;
+    } catch (_) { /* fallthrough */ }
+  }
+
+  // Prioridad 2: calcular desde day + time (Jikan/MAL)
   const utc = broadcastToUTC(broadcast);
 
   if (!utc) {
@@ -397,4 +417,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 window.todaySchedule = { init: initTodaySchedule, scrollCarousel };
 
-console.log('📅 Today Schedule v4.0 — Filtrado y horarios timezone-aware');
+console.log('📅 Today Schedule v4.1 — AniList timestamps + timezone-aware filtering');

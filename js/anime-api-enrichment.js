@@ -243,6 +243,42 @@ const _getNextEpisodeInfo = (broadcast) => {
 };
 
 /**
+ * Genera el texto de "próximo capítulo" usando el timestamp
+ * exacto de AniList. Convierte directamente al timezone local
+ * del usuario — sin cálculos de offset manual.
+ *
+ * @param {{ airingAt: number, episode: number }} nextAiring
+ * @returns {string}
+ */
+const _getNextEpisodeFromTimestamp = (nextAiring) => {
+  if (!nextAiring?.airingAt) return null;
+
+  try {
+    const date = new Date(nextAiring.airingAt * 1000); // Unix → Date UTC
+
+    // JS convierte automáticamente al timezone local del navegador
+    const localDate = date.toLocaleDateString('es-ES', {
+      weekday: 'long', month: 'long', day: 'numeric'
+    });
+
+    const localTime = date.toLocaleTimeString('es-ES', {
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    const tzName = new Intl.DateTimeFormat('es-ES', { timeZoneName: 'short' })
+      .formatToParts(date)
+      .find(p => p.type === 'timeZoneName')?.value ?? '';
+
+    const epLabel = nextAiring.episode ? ` (Ep. ${nextAiring.episode})` : '';
+
+    return `${localDate} — ${localTime} (${tzName})${epLabel}`;
+
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
  * Calcula el offset en minutos de un timezone dado para
  * un instante determinado (maneja horario de verano correctamente).
  * Positivo = timezone adelantado respecto a UTC.
@@ -311,8 +347,13 @@ const renderApiEnrichment = (apiData, uploadedEpisodes) => {
         .join('')
     : '<span class="api-no-data">Sin información</span>';
 
-  // Próximo capítulo (solo si está en emisión)
-  const nextEpInfo = isAiring ? _getNextEpisodeInfo(apiData.broadcast) : null;
+  // Próximo capítulo: usar timestamp exacto de AniList si disponible,
+  // sino calcular desde broadcast (Jikan fallback)
+  const nextEpInfo = isAiring
+    ? (apiData.nextAiringEpisode?.airingAt
+        ? _getNextEpisodeFromTimestamp(apiData.nextAiringEpisode)
+        : _getNextEpisodeInfo(apiData.broadcast))
+    : null;
   const nextEpHtml = (isAiring && nextEpInfo)
     ? `
       <div class="api-info-row">
@@ -415,7 +456,7 @@ const renderApiLoading = () => {
   block.innerHTML = `
     <div class="api-loading-inner">
       <div class="api-spinner"></div>
-      <span>Obteniendo datos desde MyAnimeList…</span>
+      <span>Obteniendo datos desde AniList / MyAnimeList…</span>
     </div>
   `;
 
@@ -432,7 +473,7 @@ const renderApiError = (message) => {
   block.id        = 'apiEnrichmentBlock';
   block.className = 'api-enrichment-block api-error-block';
   block.innerHTML = `
-    <span>⚠️ No se pudo obtener información de MAL: ${_sanitize(message)}</span>
+    <span>⚠️ No se pudo obtener información de la API: ${_sanitize(message)}</span>
   `;
 
   const synopsisDiv = document.querySelector('.anime-synopsis');
@@ -444,13 +485,22 @@ const renderApiError = (message) => {
 // ============================================
 
 /**
- * Enriquece la página de anime-details con datos de Jikan.
+ * Enriquece la página de anime-details con datos de la API.
  * Se llama desde anime-details.js DESPUÉS de renderAnimeDetails().
  *
+ * Estrategia de fuentes (prioridad):
+ *  1. AniList — más preciso para broadcast y timestamps
+ *  2. Jikan/MAL — fallback si AniList falla
+ *
+ * Normalización de datos de AniList al formato de Jikan:
+ * Los datos de AniList se adaptan al mismo schema que usa
+ * renderApiEnrichment(), así no se cambia ningún otro archivo.
+ *
  * @param {object} anime
- * @param {number} anime.malId    - ID en MyAnimeList
- * @param {string} anime.title    - Título del anime
- * @param {number} anime.episodes - Episodios subidos al hub
+ * @param {number} anime.malId      - ID en MyAnimeList
+ * @param {number} [anime.anilistId]- ID en AniList (si ya está guardado)
+ * @param {string} anime.title      - Título del anime
+ * @param {number} anime.episodes   - Episodios subidos al hub
  */
 const enrichAnimeDetails = async (anime) => {
   if (!anime || !anime.malId) {
@@ -458,22 +508,78 @@ const enrichAnimeDetails = async (anime) => {
     return;
   }
 
-  console.log(`📡 Enriqueciendo "${anime.title}" con MAL ID: ${anime.malId}`);
+  console.log(`📡 Enriqueciendo "${anime.title}"...`);
   renderApiLoading();
 
   try {
-    const apiData = await window.jikanService.getAnimeDetails(anime.malId);
+    let apiData    = null;
+    let dataSource = 'Jikan/MAL';
 
-    // ✅ Renderizar bloque de información con géneros traducidos
+    // ── Paso 1: Intentar AniList (más preciso para horarios) ──
+    if (window.anilistService) {
+      try {
+        const raw = await window.anilistService.getAnimeDetails({
+          anilistId: anime.anilistId || null,
+          malId:     anime.malId
+        });
+
+        // ✅ Normalizar AniList → schema de renderApiEnrichment
+        apiData = {
+          malId:       raw.malId ?? anime.malId,
+          status:      raw.status,
+          apiEpisodes: raw.episodes,
+          score:       raw.score,      // ya en formato "7.2" (de 10)
+          genres:      raw.genres,
+          studios:     raw.studios,
+          synopsis:    raw.synopsis,
+          airedFrom:   raw.airedFrom,
+          airedTo:     raw.airedTo,
+          broadcast:   raw.broadcast,  // incluye airingAt timestamp exacto
+
+          // Próximo episodio: usamos el timestamp exacto de AniList
+          nextAiringEpisode: raw.nextAiring ?? null
+        };
+
+        dataSource = 'AniList';
+        console.log(`✅ Datos obtenidos desde AniList`);
+
+      } catch (aniErr) {
+        console.warn('⚠️ AniList falló, usando Jikan...', aniErr.message);
+      }
+    }
+
+    // ── Paso 2: Fallback a Jikan si AniList no funcionó ──
+    if (!apiData && window.jikanService) {
+      const raw = await window.jikanService.getAnimeDetails(anime.malId);
+      apiData = {
+        malId:             raw.malId,
+        status:            raw.status,
+        apiEpisodes:       raw.apiEpisodes,
+        score:             raw.score,
+        genres:            raw.genres,
+        studios:           raw.studios,
+        synopsis:          raw.synopsis,
+        airedFrom:         raw.airedFrom,
+        airedTo:           raw.airedTo,
+        broadcast:         raw.broadcast,
+        nextAiringEpisode: null  // Jikan no tiene timestamp exacto
+      };
+      dataSource = 'Jikan/MAL';
+      console.log('✅ Datos obtenidos desde Jikan (fallback)');
+    }
+
+    if (!apiData) throw new Error('No se pudieron obtener datos de ninguna API');
+
+    // ✅ Renderizar bloque con géneros traducidos
     renderApiEnrichment(apiData, anime.episodes ?? 0);
 
-    // ✅ Actualizar el badge de estado principal del anime
+    // ✅ Actualizar badge de estado principal
     syncStatusBadge(apiData.status);
 
-    console.log('✅ Enriquecimiento completado:', {
+    console.log(`✅ Enriquecimiento completado (${dataSource}):`, {
       status:   apiData.status,
       episodes: apiData.apiEpisodes,
-      genres:   apiData.genres
+      genres:   apiData.genres?.length
     });
 
   } catch (error) {
@@ -490,4 +596,4 @@ window.animeApiEnrichment = {
   translateGenre    // Expuesto por si otro módulo lo necesita
 };
 
-console.log('🔗 Anime API Enrichment v2.0 cargado — Géneros en español');
+console.log('🔗 Anime API Enrichment v3.0 cargado — AniList + Jikan, géneros en español');

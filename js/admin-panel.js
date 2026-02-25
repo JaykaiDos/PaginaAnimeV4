@@ -553,10 +553,16 @@ window.searchMal = async () => {
 };
 
 /**
- * Vincula un anime del hub con su entrada en MAL.
- * Además de guardar el malId, consulta el broadcast
- * y lo almacena en Firebase para que today-schedule
- * no necesite hacer llamadas a la API en cada carga.
+ * Vincula un anime del hub con su entrada en MAL/AniList.
+ *
+ * Estrategia de datos:
+ *  1. Consulta AniList (por malId) → broadcast con timestamp exacto
+ *  2. Si AniList falla, cae a Jikan como fallback
+ *  3. Guarda en Firebase: malId + anilistId + broadcast
+ *
+ * El broadcast de AniList incluye airingAt (Unix timestamp UTC),
+ * lo que elimina ambigüedades de timezone al mostrar horarios.
+ *
  * @param {number} malId
  * @param {string} malTitle
  */
@@ -570,18 +576,46 @@ window.selectMalAnime = async (malId, malTitle) => {
   closeMalSearchModal();
   saveListState();
 
-  const loadingDiv = _showLoadingOverlay('🔗 Vinculando...', 'Obteniendo datos de broadcast desde MAL...');
+  const loadingDiv = _showLoadingOverlay(
+    '🔗 Vinculando...',
+    'Obteniendo horario desde AniList...'
+  );
 
   try {
-    // Obtener broadcast desde Jikan
-    const detailsData = await window.jikanService.getAnimeDetails(malId);
+    let broadcast   = null;
+    let anilistId   = null;
+    let dataSource  = 'ninguna';
+
+    // ── Paso 1: Intentar AniList (más preciso) ──
+    if (window.anilistService) {
+      try {
+        const aniData = await window.anilistService.getAnimeDetails({ malId });
+        broadcast     = aniData.broadcast || null;
+        anilistId     = aniData.anilistId || null;
+        dataSource    = 'AniList';
+        console.log(`✅ Broadcast desde AniList:`, broadcast);
+      } catch (aniErr) {
+        console.warn('⚠️ AniList falló, probando Jikan...', aniErr.message);
+      }
+    }
+
+    // ── Paso 2: Fallback a Jikan si AniList no devolvió broadcast ──
+    if (!broadcast && window.jikanService) {
+      try {
+        const jikanData = await window.jikanService.getAnimeDetails(malId);
+        broadcast       = jikanData.broadcast || null;
+        dataSource      = 'Jikan/MAL';
+        console.log(`✅ Broadcast desde Jikan:`, broadcast);
+      } catch (jikanErr) {
+        console.warn('⚠️ Jikan también falló:', jikanErr.message);
+      }
+    }
 
     const updatePayload = {
       malId,
       malTitle,
-      // ✅ Guardar broadcast en Firebase para evitar consultas futuras
-      broadcast:      detailsData.broadcast || null,
-      // scheduleActive: true por defecto (visible en el carrusel)
+      anilistId,              // null si no se encontró en AniList
+      broadcast,              // null si ninguna API devolvió datos
       scheduleActive: true
     };
 
@@ -595,13 +629,13 @@ window.selectMalAnime = async (malId, malTitle) => {
 
     document.body.removeChild(loadingDiv);
 
-    const broadcastInfo = detailsData.broadcast
-      ? `📅 ${detailsData.broadcast.day} a las ${detailsData.broadcast.time}`
-      : '(sin horario de broadcast disponible)';
+    const broadcastInfo = broadcast
+      ? `📅 ${broadcast.day} ${broadcast.time}${broadcast.airingAt ? ' (timestamp exacto)' : ''}`
+      : '⚠️ Sin horario disponible';
 
-    _showToast(`✅ "${malTitle}" vinculado — ${broadcastInfo}`);
+    _showToast(`✅ "${malTitle}" vinculado via ${dataSource} — ${broadcastInfo}`);
 
-    // ✅ Re-renderizar SOLO la lista, sin recargar la página
+    // Re-renderizar solo la lista, sin recargar la página
     renderAnimesList(currentAnimes, _savedSeasonFilter);
 
   } catch (error) {
