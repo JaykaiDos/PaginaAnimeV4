@@ -1,38 +1,50 @@
 /* ============================================
    ANIME DETAILS - JAVASCRIPT
    Autor: Jaykai2
-   
-   CAMBIOS v2:
-   - toggleFavorite() guarda poster, temporada y año
-     para que "Control de Animes" pueda filtrar y mostrar
-     la imagen de cada anime.
-   - Botón "Volver a mi lista" detecta si el usuario
-     llegó desde my-list.html y lo retorna ahí.
+
+   VERSIÓN 3.0 — CORRECCIONES:
+   - Fix bug crítico: callApiEnrichment movida antes de su uso
+   - Fix: currentAnime ahora se asigna correctamente
+   - Fix: badge de episodios se actualiza con conteo real
+   - Añadido: syncEpisodesBadge() para actualizar el contador
+     de episodios subidos después de cargarlos de Firebase
    ============================================ */
 
-// Estado de la aplicación
-let currentAnime = null;
+// ============================================
+// ESTADO DE LA APLICACIÓN
+// ============================================
+let currentAnime    = null;
 let currentEpisodes = [];
 let watchedEpisodes = [];
-let currentFilter = 'all';
+let currentFilter   = 'all';
 
-// Elementos del DOM
-const animeDetails = document.getElementById('animeDetails');
+// ============================================
+// REFERENCIAS AL DOM
+// ============================================
+const animeDetails    = document.getElementById('animeDetails');
 const episodesSection = document.getElementById('episodesSection');
-const episodesGrid = document.getElementById('episodesGrid');
+const episodesGrid    = document.getElementById('episodesGrid');
 const breadcrumbTitle = document.getElementById('breadcrumbTitle');
 
 // ============================================
-// CARGAR EPISODIOS VISTOS DESDE LOCALSTORAGE
+// EPISODIOS VISTOS — LOCALSTORAGE
 // ============================================
+
+/**
+ * Carga los episodios marcados como vistos desde localStorage.
+ * @param {string} animeId
+ * @returns {number[]}
+ */
 const loadWatchedEpisodes = (animeId) => {
   const stored = localStorage.getItem(`watched_${animeId}`);
   return stored ? JSON.parse(stored) : [];
 };
 
-// ============================================
-// GUARDAR EPISODIOS VISTOS
-// ============================================
+/**
+ * Persiste los episodios vistos en localStorage.
+ * @param {string} animeId
+ * @param {number[]} episodes
+ */
 const saveWatchedEpisodes = (animeId, episodes) => {
   localStorage.setItem(`watched_${animeId}`, JSON.stringify(episodes));
 };
@@ -40,15 +52,26 @@ const saveWatchedEpisodes = (animeId, episodes) => {
 // ============================================
 // CARGAR ANIME DESDE FIREBASE
 // ============================================
+
+/**
+ * Obtiene los datos del anime desde Firestore y construye
+ * el objeto `currentAnime` con todos los campos necesarios.
+ * @param {string} animeId - ID del documento en Firestore
+ * @returns {Promise<object|null>}
+ */
 const loadAnimeFromFirebase = async (animeId) => {
-  animeDetails.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando información del anime...</p></div>';
-  
+  animeDetails.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Cargando información del anime...</p>
+    </div>
+  `;
+
   try {
     console.log('🔍 Cargando anime con ID:', animeId);
-    
-    // Obtener anime desde Firebase
+
     const anime = await window.firebaseService.getAnimeById(animeId);
-    
+
     if (!anime) {
       animeDetails.innerHTML = `
         <div style="text-align: center; padding: 4rem 2rem;">
@@ -60,37 +83,43 @@ const loadAnimeFromFirebase = async (animeId) => {
       `;
       return null;
     }
-    
-    console.log('✅ Anime cargado:', anime);
-    
-    // Obtener temporada
-    const seasons = await window.firebaseService.getAllSeasons();
-    const season = seasons.find(s => s.id === anime.seasonId);
-    
-    // -----------------------------------------------
-    // Extraer año desde el seasonId (ej: "fall_2025")
-    // o desde un campo "year" si existe en Firestore.
-    // -----------------------------------------------
+
+    console.log('✅ Anime cargado desde Firebase:', anime);
+
+    // Obtener datos de la temporada
+    const seasons    = await window.firebaseService.getAllSeasons();
+    const season     = seasons.find(s => s.id === anime.seasonId);
+
+    // Extraer año y nombre de temporada desde el seasonId (e.g. "fall_2025")
     const seasonParts = anime.seasonId ? anime.seasonId.split('_') : [];
     const seasonYear  = seasonParts.length >= 2 ? seasonParts[seasonParts.length - 1] : null;
-    const seasonName  = seasonParts.length >= 1 ? seasonParts[0] : 'fall'; // "fall", "winter"...
-    
-    // Transformar al formato esperado
+    const seasonName  = seasonParts.length >= 1 ? seasonParts[0] : 'fall';
+
+    // ✅ CORRECCIÓN: asignar a currentAnime (antes solo se retornaba sin asignar)
     currentAnime = {
-      id:         anime.id,
-      title:      anime.title,
-      season:     seasonName,
-      seasonName: season ? season.name : 'Temporada',
-      year:       anime.year || seasonYear || null,
-      poster:     anime.poster || '',
-      synopsis:   anime.synopsis,
-      episodes:   anime.totalEpisodes || 0,
-      status:     anime.status === 'airing' ? 'En emisión' : 'Finalizado',
-      trailers:   anime.trailers || []
+      id:          anime.id,
+      title:       anime.title,
+      season:      seasonName,
+      seasonName:  season ? season.name : 'Temporada',
+      year:        anime.year    || seasonYear || null,
+      poster:      anime.poster  || '',
+      synopsis:    anime.synopsis || '',
+
+      // Episodios subidos al hub (campo de Firebase, gestionado por admin)
+      episodes:    anime.totalEpisodes || 0,
+
+      // Estado local (Firebase)
+      statusRaw:   anime.status || 'finished',
+      status:      anime.status === 'airing' ? 'En Emisión' : 'Finalizado',
+
+      trailers:    anime.trailers || [],
+
+      // MAL ID para enriquecimiento con la API
+      malId:       anime.malId || null
     };
-    
+
     return currentAnime;
-    
+
   } catch (error) {
     console.error('❌ Error al cargar anime:', error);
     animeDetails.innerHTML = `
@@ -105,36 +134,39 @@ const loadAnimeFromFirebase = async (animeId) => {
 };
 
 // ============================================
-// CARGAR EPISODIOS DESDE FIREBASE - MEJORADO
+// CARGAR EPISODIOS DESDE FIREBASE
 // ============================================
+
+/**
+ * Obtiene los episodios del anime desde Firestore.
+ * @param {string} animeId
+ * @returns {Promise<object[]>}
+ */
 const loadEpisodesFromFirebase = async (animeId) => {
   try {
     console.log('📺 Cargando episodios para anime:', animeId);
-    
+
     const episodes = await window.firebaseService.getEpisodesByAnime(animeId);
-    
+
     console.log('✅ Episodios obtenidos de Firebase:', episodes.length);
-    
+
     if (episodes.length === 0) {
-      console.log('⚠️ No se encontraron episodios');
       currentEpisodes = [];
       return [];
     }
-    
-    // Transformar al formato esperado
-    currentEpisodes = episodes.map(ep => ({
-      number:   ep.episodeNumber,
-      title:    ep.title,
-      duration: ep.duration,
-      videoUrl: ep.videoUrl
-    }));
-    
-    // Ordenar por número de episodio
-    currentEpisodes.sort((a, b) => a.number - b.number);
-    
-    console.log(`✅ ${currentEpisodes.length} episodios transformados:`, currentEpisodes);
+
+    currentEpisodes = episodes
+      .map(ep => ({
+        number:   ep.episodeNumber,
+        title:    ep.title,
+        duration: ep.duration,
+        videoUrl: ep.videoUrl
+      }))
+      .sort((a, b) => a.number - b.number);
+
+    console.log(`✅ ${currentEpisodes.length} episodios cargados`);
     return currentEpisodes;
-    
+
   } catch (error) {
     console.error('❌ Error al cargar episodios:', error);
     currentEpisodes = [];
@@ -143,27 +175,24 @@ const loadEpisodesFromFirebase = async (animeId) => {
 };
 
 // ============================================
-// DETECTAR URL DE RETORNO (para el botón "Volver")
+// DETECTAR URL DE RETORNO
 // ============================================
 
 /**
- * Devuelve el href del botón "Volver".
- * Si el referrer es my-list.html, regresa ahí;
- * de lo contrario regresa a la búsqueda.
+ * Retorna la URL del botón "Volver" según la página de origen.
  * @returns {string}
  */
 const getBackUrl = () => {
   try {
-    const ref = document.referrer;
-    if (ref && ref.includes('my-list.html')) {
+    if (document.referrer && document.referrer.includes('my-list.html')) {
       return 'my-list.html';
     }
-  } catch (_) { /* referrer no disponible en algunos contextos */ }
+  } catch (_) { /* referrer no disponible */ }
   return 'search.html';
 };
 
 /**
- * Label del botón "Volver" según la página de origen.
+ * Retorna el label del botón "Volver" según la página de origen.
  * @returns {string}
  */
 const getBackLabel = () => {
@@ -178,28 +207,49 @@ const getBackLabel = () => {
 // ============================================
 // RENDERIZAR DETALLES DEL ANIME
 // ============================================
+
+/**
+ * Genera el HTML principal de la sección de detalles
+ * e inserta el DOM base. El bloque de API se agrega
+ * luego mediante `enrichAnimeDetails()`.
+ * @param {object} anime - currentAnime
+ */
 const renderAnimeDetails = (anime) => {
   const backUrl   = getBackUrl();
   const backLabel = getBackLabel();
 
   animeDetails.innerHTML = `
     <div class="details-hero">
-      <img src="${anime.poster}" alt="${anime.title}" class="anime-poster" onerror="this.src='https://via.placeholder.com/400x550?text=Sin+Imagen'">
-      
+      <img
+        src="${anime.poster}"
+        alt="${anime.title}"
+        class="anime-poster"
+        onerror="this.src='https://via.placeholder.com/400x550?text=Sin+Imagen'"
+      >
+
       <div class="anime-info">
         <h1 class="anime-title">${anime.title}</h1>
-        
+
         <div class="anime-meta">
           <span class="meta-badge season">📅 ${anime.seasonName}</span>
-          <span class="meta-badge status">🔴 ${anime.status}</span>
-          <span class="meta-badge episodes">📺 ${anime.episodes} episodios</span>
+          <span class="meta-badge status">
+            ${anime.statusRaw === 'airing' ? '🔴' : '✅'} ${anime.status}
+          </span>
+          <!-- 
+            📺 Este badge muestra los episodios SUBIDOS AL HUB.
+            Se actualiza en syncEpisodesBadge() una vez que
+            se cargan los episodios reales desde Firebase.
+          -->
+          <span class="meta-badge episodes" id="episodesBadge">
+            📺 ${anime.episodes} ep subidos
+          </span>
         </div>
-        
+
         <div class="anime-synopsis">
           <h3>📖 Sinopsis</h3>
           <p>${anime.synopsis}</p>
         </div>
-        
+
         <div class="anime-actions">
           <button class="action-btn btn-primary" onclick="playFirstEpisode()">
             ▶️ Ver Primer Episodio
@@ -207,14 +257,13 @@ const renderAnimeDetails = (anime) => {
           <button class="action-btn btn-secondary" id="favBtn" onclick="toggleFavorite()">
             ⭐ Agregar a Favoritos
           </button>
-          <!-- Botón de retorno contextual -->
           <a href="${backUrl}" class="action-btn btn-back">
             ${backLabel}
           </a>
         </div>
       </div>
     </div>
-    
+
     ${anime.trailers && anime.trailers.length > 0 ? `
     <div class="anime-trailers">
       <h3>🎬 Trailers</h3>
@@ -227,30 +276,84 @@ const renderAnimeDetails = (anime) => {
     ` : ''}
   `;
 
-  // Actualizar estado del botón de favoritos
   updateFavoriteButton();
 };
 
 // ============================================
-// RENDERIZAR LISTA DE EPISODIOS - CORREGIDO
+// ✅ SINCRONIZAR BADGE DE EPISODIOS SUBIDOS
+// Llama esto DESPUÉS de cargar los episodios de Firebase
+// para que el contador sea exacto (no depende de totalEpisodes).
 // ============================================
+
+/**
+ * Actualiza el badge "📺 X ep subidos" con el conteo real
+ * de episodios cargados desde Firebase, evitando depender
+ * del campo `totalEpisodes` de Firestore (que puede quedar
+ * desincronizado si se agregan/eliminan eps manualmente).
+ */
+const syncEpisodesBadge = () => {
+  const badge = document.getElementById('episodesBadge');
+  if (!badge) return;
+
+  const count = currentEpisodes.length;
+  badge.textContent = `📺 ${count} ep subidos`;
+
+  // Si el anime tiene api data ya cargada, el enrichment
+  // actualizará también el total de MAL por separado.
+};
+
+// ============================================
+// ENRIQUECIMIENTO CON API
+// ✅ DEFINIDA ANTES DE SER LLAMADA (fix hoisting bug)
+// ============================================
+
+/**
+ * Llama al servicio de enriquecimiento si el anime
+ * tiene un malId vinculado. Se ejecuta en paralelo
+ * a la carga de episodios (no bloquea la UI).
+ * @param {object} anime - currentAnime
+ */
+const callApiEnrichment = (anime) => {
+  if (!window.animeApiEnrichment) {
+    console.warn('⚠️ animeApiEnrichment no disponible');
+    return;
+  }
+  if (!anime.malId) {
+    console.info('ℹ️ Sin MAL ID — saltando enriquecimiento de API');
+    return;
+  }
+
+  // No bloqueante: el enriquecimiento ocurre en paralelo
+  window.animeApiEnrichment.enrichAnimeDetails({
+    malId:    anime.malId,
+    title:    anime.title,
+    episodes: currentEpisodes.length  // conteo real post-carga
+  });
+};
+
+// ============================================
+// RENDERIZAR LISTA DE EPISODIOS
+// ============================================
+
+/**
+ * Renderiza el grid de episodios aplicando el filtro activo.
+ * @param {'all'|'watched'|'unwatched'} filter
+ */
 const renderEpisodes = (filter = 'all') => {
-  console.log('🎨 Renderizando episodios. Total:', currentEpisodes.length, 'Filtro:', filter);
-  
+  console.log('🎨 Renderizando episodios. Total:', currentEpisodes.length, '| Filtro:', filter);
+
   if (!currentAnime) {
-    console.warn('⚠️ No hay anime actual');
     episodesGrid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #48cae480;">
+      <div style="grid-column:1/-1; text-align:center; padding:2rem; color:#48cae480;">
         <p>No se ha cargado el anime</p>
       </div>
     `;
     return;
   }
-  
+
   if (!currentEpisodes || currentEpisodes.length === 0) {
-    console.log('ℹ️ No hay episodios disponibles');
     episodesGrid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #48cae480;">
+      <div style="grid-column:1/-1; text-align:center; padding:2rem; color:#48cae480;">
         <p>Este anime aún no tiene episodios disponibles</p>
       </div>
     `;
@@ -259,7 +362,6 @@ const renderEpisodes = (filter = 'all') => {
 
   let episodes = currentEpisodes;
 
-  // Aplicar filtro
   if (filter === 'watched') {
     episodes = episodes.filter(ep => watchedEpisodes.includes(ep.number));
   } else if (filter === 'unwatched') {
@@ -268,18 +370,18 @@ const renderEpisodes = (filter = 'all') => {
 
   if (episodes.length === 0) {
     episodesGrid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #48cae480;">
+      <div style="grid-column:1/-1; text-align:center; padding:2rem; color:#48cae480;">
         <p>No hay episodios en esta categoría</p>
       </div>
     `;
     return;
   }
 
-  console.log('✅ Renderizando', episodes.length, 'episodios en el DOM');
-
   episodesGrid.innerHTML = episodes.map(episode => `
-    <article class="episode-card ${watchedEpisodes.includes(episode.number) ? 'watched' : ''}"
-             onclick="playEpisode(${episode.number})">
+    <article
+      class="episode-card ${watchedEpisodes.includes(episode.number) ? 'watched' : ''}"
+      onclick="playEpisode(${episode.number})"
+    >
       <div class="episode-number">EP ${episode.number}</div>
       <h3 class="episode-title">${episode.title}</h3>
       <p class="episode-duration">⏱️ ${episode.duration}</p>
@@ -288,54 +390,58 @@ const renderEpisodes = (filter = 'all') => {
 };
 
 // ============================================
-// REPRODUCIR EPISODIO
+// REPRODUCCIÓN
 // ============================================
+
+/**
+ * Navega a la pantalla de reproducción y marca el episodio como visto.
+ * @param {number} episodeNumber
+ */
 window.playEpisode = (episodeNumber) => {
-  console.log('▶️ Reproduciendo episodio:', episodeNumber);
-  
-  // Marcar como visto
+  if (!currentAnime) return;
+
   if (!watchedEpisodes.includes(episodeNumber)) {
     watchedEpisodes.push(episodeNumber);
     saveWatchedEpisodes(currentAnime.id, watchedEpisodes);
   }
 
-  // Navegar a página de reproducción
   window.location.href = `watch.html?anime=${currentAnime.id}&episode=${episodeNumber}`;
 };
 
-// ============================================
-// REPRODUCIR PRIMER EPISODIO
-// ============================================
+/** Reproduce el primer episodio disponible. */
 window.playFirstEpisode = () => {
   if (currentEpisodes.length > 0) {
-    playEpisode(1);
+    playEpisode(currentEpisodes[0].number);
   } else {
     alert('⚠️ Este anime aún no tiene episodios disponibles');
   }
 };
 
 // ============================================
-// TOGGLE FAVORITO (MEJORADO)
-// Ahora guarda: poster, temporada, año y estado inicial
-// para que "Control de Animes" los pueda usar.
+// FAVORITOS
 // ============================================
+
+/**
+ * Agrega o quita el anime actual de la lista de favoritos
+ * en localStorage.
+ */
 window.toggleFavorite = () => {
+  if (!currentAnime) return;
+
   let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
   const favIndex = favorites.findIndex(fav => fav.id === currentAnime.id);
 
   if (favIndex !== -1) {
-    /* Ya está en favoritos → eliminar */
     favorites.splice(favIndex, 1);
   } else {
-    /* No está → agregar con datos enriquecidos */
     favorites.push({
       id:          currentAnime.id,
       title:       currentAnime.title,
-      poster:      currentAnime.poster || '',
-      season:      currentAnime.season || '',      // "fall", "winter"...
-      seasonName:  currentAnime.seasonName || '',  // "Otoño 2025"
-      year:        currentAnime.year || null,      // 2025
-      watchStatus: 'pending'                       // estado inicial: Pendiente
+      poster:      currentAnime.poster      || '',
+      season:      currentAnime.season      || '',
+      seasonName:  currentAnime.seasonName  || '',
+      year:        currentAnime.year        || null,
+      watchStatus: 'pending'
     });
   }
 
@@ -343,54 +449,53 @@ window.toggleFavorite = () => {
   updateFavoriteButton();
 };
 
-// ============================================
-// ACTUALIZAR BOTÓN DE FAVORITOS
-// ============================================
+/**
+ * Actualiza el texto y estilo del botón de favoritos
+ * según el estado actual en localStorage.
+ */
 const updateFavoriteButton = () => {
   const favBtn = document.getElementById('favBtn');
-  if (!favBtn) return;
+  if (!favBtn || !currentAnime) return;
 
-  const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+  const favorites  = JSON.parse(localStorage.getItem('favorites')) || [];
   const isFavorite = favorites.some(fav => fav.id === currentAnime.id);
 
-  if (isFavorite) {
-    favBtn.classList.add('active');
-    favBtn.innerHTML = '⭐ En Favoritos';
-  } else {
-    favBtn.classList.remove('active');
-    favBtn.innerHTML = '⭐ Agregar a Favoritos';
-  }
+  favBtn.classList.toggle('active', isFavorite);
+  favBtn.innerHTML = isFavorite ? '⭐ En Favoritos' : '⭐ Agregar a Favoritos';
 };
 
 // ============================================
 // FILTROS DE EPISODIOS
 // ============================================
 document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('filter-btn')) {
-    // Remover active de todos
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    
-    // Agregar active al clickeado
-    e.target.classList.add('active');
-    
-    // Aplicar filtro
-    const filter = e.target.dataset.filter;
-    currentFilter = filter;
-    renderEpisodes(filter);
-  }
+  if (!e.target.classList.contains('filter-btn')) return;
+
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  e.target.classList.add('active');
+
+  currentFilter = e.target.dataset.filter;
+  renderEpisodes(currentFilter);
 });
 
 // ============================================
-// CARGAR ANIME DESDE URL - MEJORADO
+// FLUJO PRINCIPAL DE CARGA
 // ============================================
+
+/**
+ * Orquesta la carga completa de la página de detalles:
+ * 1. Lee el ID del anime desde la URL
+ * 2. Carga datos de Firebase
+ * 3. Renderiza la UI base
+ * 4. Lanza el enriquecimiento de API (no bloqueante)
+ * 5. Carga y renderiza los episodios
+ * 6. Actualiza el badge de episodios con el conteo real
+ */
 const loadAnime = async () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const animeId = urlParams.get('id');
-  
-  console.log('🚀 Iniciando carga de anime. ID:', animeId);
-  
+  const animeId   = urlParams.get('id');
+
+  console.log('🚀 Iniciando carga. ID:', animeId);
+
   if (!animeId) {
     animeDetails.innerHTML = `
       <div style="text-align: center; padding: 4rem 2rem;">
@@ -402,35 +507,44 @@ const loadAnime = async () => {
     `;
     return;
   }
-  
-  // Cargar anime desde Firebase
+
+  // 1. Cargar anime desde Firebase (asigna currentAnime)
   const anime = await loadAnimeFromFirebase(animeId);
-  
   if (!anime) {
     console.error('❌ No se pudo cargar el anime');
     return;
   }
-  
-  // Cargar episodios vistos
-  watchedEpisodes = loadWatchedEpisodes(animeId);
-  console.log('📋 Episodios vistos previamente:', watchedEpisodes);
 
-  // Actualizar breadcrumb
+  // 2. Cargar episodios vistos
+  watchedEpisodes = loadWatchedEpisodes(animeId);
+  console.log('📋 Episodios vistos:', watchedEpisodes);
+
+  // 3. Actualizar breadcrumb
   breadcrumbTitle.textContent = anime.title;
 
-  // Renderizar detalles
+  // 4. Renderizar estructura base de la página
   renderAnimeDetails(anime);
-  
-  // Mostrar sección de episodios
+
+  // 5. ✅ Lanzar enriquecimiento de API EN PARALELO (no bloquea)
+  callApiEnrichment(anime);
+
+  // 6. Mostrar sección de episodios con loading
   episodesSection.style.display = 'block';
-  episodesGrid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando episodios...</p></div>';
-  
-  // Cargar y mostrar episodios
+  episodesGrid.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Cargando episodios...</p>
+    </div>
+  `;
+
+  // 7. Cargar episodios desde Firebase
   await loadEpisodesFromFirebase(animeId);
-  
-  console.log('🎬 Total de episodios cargados:', currentEpisodes.length);
-  
-  // Renderizar episodios
+  console.log('🎬 Episodios cargados:', currentEpisodes.length);
+
+  // 8. ✅ Actualizar badge con conteo real de episodios
+  syncEpisodesBadge();
+
+  // 9. Renderizar episodios
   renderEpisodes(currentFilter);
 };
 
@@ -438,23 +552,26 @@ const loadAnime = async () => {
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('📺 Página de detalles cargada');
-  
-  // Esperar a que Firebase esté listo
+  console.log('📺 Página de detalles iniciando...');
+
   if (window.firebaseService) {
     console.log('✅ Firebase Service disponible');
     await loadAnime();
   } else {
-    console.error('❌ Firebase Service no está disponible');
-    animeDetails.innerHTML = '<div style="text-align: center; padding: 3rem;"><p style="color: #ef4444;">❌ Error: Firebase no está configurado</p></div>';
+    console.error('❌ Firebase Service no disponible');
+    animeDetails.innerHTML = `
+      <div style="text-align: center; padding: 3rem;">
+        <p style="color: #ef4444;">❌ Error: Firebase no está configurado</p>
+      </div>
+    `;
   }
 });
 
 console.log(`
 ╔═══════════════════════════════════════╗
-║   📺 ANIME DETAILS 📺                ║
+║   📺 ANIME DETAILS v3.0 📺           ║
 ║   Detalles y Lista de Capítulos      ║
-║   🔥 Conectado a Firebase            ║
+║   🔥 Firebase + 📡 Jikan API         ║
 ║   Hecho por: Jaykai2                 ║
 ╚═══════════════════════════════════════╝
 `);

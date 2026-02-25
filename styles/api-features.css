@@ -1,0 +1,400 @@
+/* ============================================
+   API ENRICHMENT + TODAY SCHEDULE — ESTILOS
+   Archivo: styles/api-features.css
+   Autor: Jaykai2
+   Versión: 1.0
+
+   Cubre:
+   1. Bloque de "Información desde MyAnimeList"
+      en anime-details.html
+   2. Carrusel "Estrenos de Hoy" en index.html
+   ============================================ */
+
+/* ────────────────────────────────────────────
+   1. API ENRICHMENT BLOCK (anime-details)
+   ──────────────────────────────────────────── */
+
+.api-enrichment-block {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(72, 202, 228, 0.06);
+  border: 1px solid rgba(72, 202, 228, 0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+
+/* Título del bloque */
+.api-enrichment-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ade8f4;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Enlace "↗ MAL" */
+.api-mal-link {
+  font-size: 0.75rem;
+  color: #48cae4;
+  text-decoration: none;
+  border: 1px solid rgba(72, 202, 228, 0.4);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+
+.api-mal-link:hover {
+  background: rgba(72, 202, 228, 0.15);
+}
+
+/* Grid de filas de información */
+.api-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.api-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.api-label {
+  font-size: 0.8rem;
+  color: #48cae480;
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+.api-value {
+  font-size: 0.9rem;
+  color: #caf0f8;
+}
+
+/* Nota pequeña junto al valor */
+.api-note {
+  font-size: 0.75rem;
+  color: #48cae460;
+  margin-left: 0.4rem;
+}
+
+/* Estados de emisión */
+.api-status-airing {
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.api-status-finished {
+  color: #6ee7b7;
+  font-weight: 600;
+}
+
+/* Sección de géneros */
+.api-genres-section {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.api-genres-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.api-genre-badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.6rem;
+  background: rgba(72, 202, 228, 0.12);
+  border: 1px solid rgba(72, 202, 228, 0.3);
+  border-radius: 20px;
+  color: #ade8f4;
+}
+
+.api-no-data {
+  font-size: 0.8rem;
+  color: #48cae440;
+}
+
+/* Estado: loading */
+.api-loading-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+}
+
+.api-loading-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #48cae4;
+  font-size: 0.85rem;
+}
+
+.api-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(72, 202, 228, 0.2);
+  border-top-color: #48cae4;
+  border-radius: 50%;
+  animation: apiSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes apiSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Estado: error */
+.api-error-block {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  padding: 0.75rem 1rem;
+}
+
+
+/* ────────────────────────────────────────────
+   2. SECCIÓN "ESTRENOS DE HOY" (index.html)
+   ──────────────────────────────────────────── */
+
+.today-schedule-section {
+  padding: 3rem 0;
+  background: rgba(13, 2, 33, 0.6);
+  border-top: 1px solid rgba(72, 202, 228, 0.1);
+}
+
+.schedule-subtitle {
+  color: #48cae480;
+  font-size: 0.9rem;
+  margin: -0.5rem 0 1.5rem;
+  text-align: center;
+}
+
+/* Wrapper con flechas de navegación */
+.schedule-carousel-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Botones de navegación */
+.schedule-nav {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(72, 202, 228, 0.35);
+  background: rgba(72, 202, 228, 0.1);
+  color: #ade8f4;
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  line-height: 1;
+}
+
+.schedule-nav:hover {
+  background: rgba(72, 202, 228, 0.25);
+}
+
+/* Carrusel horizontal */
+.schedule-carousel {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 0.5rem 0.25rem 1rem;
+  flex: 1;
+
+  /* Ocultar scrollbar visualmente, mantener funcionalidad */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(72, 202, 228, 0.3) transparent;
+}
+
+.schedule-carousel::-webkit-scrollbar {
+  height: 4px;
+}
+
+.schedule-carousel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.schedule-carousel::-webkit-scrollbar-thumb {
+  background: rgba(72, 202, 228, 0.3);
+  border-radius: 4px;
+}
+
+/* ── CARDS ── */
+.schedule-card {
+  flex-shrink: 0;
+  width: 140px;
+  background: rgba(13, 2, 33, 0.8);
+  border: 1px solid rgba(72, 202, 228, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.schedule-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(72, 202, 228, 0.5);
+}
+
+/* Card para animes que están en el hub */
+.schedule-card--in-hub {
+  border-color: rgba(72, 202, 228, 0.35);
+  cursor: pointer;
+}
+
+.schedule-card--in-hub:hover {
+  border-color: #48cae4;
+  box-shadow: 0 0 16px rgba(72, 202, 228, 0.2);
+}
+
+/* Poster */
+.schedule-card__poster-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+}
+
+.schedule-card__poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Badge sobre el poster */
+.schedule-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 0.62rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.schedule-badge--hub {
+  background: rgba(72, 202, 228, 0.85);
+  color: #0d0221;
+}
+
+.schedule-badge--mal {
+  background: rgba(255, 255, 255, 0.15);
+  color: #caf0f8;
+}
+
+/* Body de la card */
+.schedule-card__body {
+  padding: 0.6rem 0.75rem 0.75rem;
+}
+
+.schedule-card__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #caf0f8;
+  margin: 0 0 0.3rem;
+  line-height: 1.3;
+
+  /* Limitar a 2 líneas */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.schedule-card__meta {
+  font-size: 0.7rem;
+  color: #48cae480;
+  margin: 0 0 0.15rem;
+  line-height: 1.3;
+}
+
+.schedule-card__genres {
+  font-size: 0.67rem;
+  color: #48cae460;
+  margin: 0.25rem 0 0;
+  line-height: 1.3;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── ESTADOS ESPECIALES ── */
+
+/* Loading */
+.schedule-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  width: 100%;
+  color: #48cae4;
+  font-size: 0.9rem;
+}
+
+.schedule-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(72, 202, 228, 0.2);
+  border-top-color: #48cae4;
+  border-radius: 50%;
+  animation: apiSpin 0.9s linear infinite;
+}
+
+/* Vacío / Error */
+.schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  width: 100%;
+  color: #48cae460;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+
+/* ────────────────────────────────────────────
+   RESPONSIVE
+   ──────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .api-label {
+    min-width: 120px;
+  }
+
+  .schedule-card {
+    width: 120px;
+  }
+
+  .schedule-nav {
+    width: 30px;
+    height: 30px;
+    font-size: 1.1rem;
+  }
+}

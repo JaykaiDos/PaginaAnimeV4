@@ -1,61 +1,101 @@
 /* ============================================
    ADMIN PANEL LOGIC
    Archivo: js/admin-panel.js
-   ✅ ACTUALIZADO: Sistema de importación de personajes
+   Autor: Jaykai2
+   Versión: 3.0
+
+   MEJORAS v3:
+   ─────────────────────────────────────────────
+   1. Botón "🔗 Vincular MAL" separado del de
+      importar personajes. Muestra badge de estado
+      (vinculado / no vinculado) en la card.
+
+   2. Al vincular un MAL ID, también se guarda
+      el broadcast (día/hora) en Firebase para que
+      today-schedule NO tenga que consultar Jikan
+      cada vez que carga la página.
+
+   3. Botón "📅 Estrenos" en cada anime para
+      activar/desactivar su aparición en el
+      carrusel "Estrenos de Hoy" sin eliminar
+      la vinculación.
+
+   4. Los filtros (temporada) y la posición del
+      scroll del listado de animes se preservan
+      después de operaciones de vinculación,
+      importación de personajes, etc.
+      (Sin recargas ni pérdida de estado de UI)
+   ─────────────────────────────────────────────
+   CAMPOS NUEVOS EN FIREBASE (colección animes):
+   • malId         → number  - ID de MyAnimeList
+   • malTitle      → string  - Título en MAL
+   • broadcast     → object  - { day, time, timezone }
+                               guardado desde Jikan al vincular
+   • scheduleActive→ boolean - true = mostrar en carrusel hoy
+                               false = excluir del carrusel
    ============================================ */
 
+// ============================================
+// ESTADO GLOBAL
+// ============================================
 const { 
   getAllSeasons, addSeason, deleteSeason,
   getAllAnimes, getAnimesBySeason, addAnime, updateAnime, deleteAnime,
   getEpisodesByAnime, addEpisode, deleteEpisode,
-  getAllCharacters, getCharactersByAnime, addCharacter, addMultipleCharacters, deleteCharacter, deleteCharactersByAnime, hasCharacters
+  getAllCharacters, getCharactersByAnime, addCharacter,
+  addMultipleCharacters, deleteCharacter, deleteCharactersByAnime, hasCharacters
 } = window.firebaseService;
 
-// Estado global
-let currentSeasons = [];
-let currentAnimes = [];
-let currentEpisodes = [];
+let currentSeasons   = [];
+let currentAnimes    = [];
+let currentEpisodes  = [];
 let currentCharacters = [];
-let selectedAnimeId = null;
-let editingSeasonId = null;
-let editingAnimeId = null;
+let selectedAnimeId  = null;
+let editingSeasonId  = null;
+let editingAnimeId   = null;
+
+// -----------------------------------------------
+// Estado de UI que queremos preservar entre recargas
+// de lista (sin perder posición ni filtros)
+// -----------------------------------------------
+let _savedSeasonFilter = 'all';   // filtro de temporada activo
+let _savedScrollTop    = 0;       // posición de scroll del listado
 
 // ============================================
 // INICIALIZACIÓN
 // ============================================
 window.addEventListener('load', async () => {
   await window.authSystem.protectAdminPage();
-  
+
   const user = firebase.auth().currentUser;
   if (user) {
     document.getElementById('userEmail').textContent = user.email;
   }
-  
+
   await loadSeasons();
   await loadAllAnimes();
   await fillSeasonSelect();
-  
+
   initTabs();
   initForms();
-  
-  console.log('✅ Panel de administración cargado');
+
+  console.log('✅ Admin Panel v3.0 cargado');
 });
 
 // ============================================
 // NAVEGACIÓN POR TABS
 // ============================================
 const initTabs = () => {
-  const navTabs = document.querySelectorAll('.nav-tab');
+  const navTabs     = document.querySelectorAll('.nav-tab');
   const tabContents = document.querySelectorAll('.tab-content');
-  
+
   navTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       navTabs.forEach(t => t.classList.remove('active'));
       tabContents.forEach(c => c.classList.remove('active'));
-      
+
       tab.classList.add('active');
-      const tabId = tab.dataset.tab + '-tab';
-      document.getElementById(tabId).classList.add('active');
+      document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
     });
   });
 };
@@ -66,14 +106,14 @@ const initTabs = () => {
 const loadSeasons = async () => {
   const grid = document.getElementById('seasonsGrid');
   grid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>';
-  
+
   currentSeasons = await getAllSeasons();
-  
+
   if (currentSeasons.length === 0) {
     grid.innerHTML = '<p class="empty-state">No hay temporadas creadas</p>';
     return;
   }
-  
+
   grid.innerHTML = currentSeasons.map(season => `
     <div class="season-card">
       <div class="season-card-header">
@@ -91,29 +131,27 @@ const loadSeasons = async () => {
       </div>
     </div>
   `).join('');
-  
+
   updateSeasonSelectors();
 };
 
 window.openSeasonModal = (seasonId = null) => {
   editingSeasonId = seasonId;
   const modal = document.getElementById('seasonModal');
-  const title = document.getElementById('seasonModalTitle');
-  const form = document.getElementById('seasonForm');
-  
+
   if (seasonId) {
     const season = currentSeasons.find(s => s.id === seasonId);
-    title.textContent = 'Editar Temporada';
-    document.getElementById('seasonName').value = season.name;
-    document.getElementById('seasonEmoji').value = season.emoji || '';
+    document.getElementById('seasonModalTitle').textContent = 'Editar Temporada';
+    document.getElementById('seasonName').value   = season.name;
+    document.getElementById('seasonEmoji').value  = season.emoji || '';
     document.getElementById('seasonPeriod').value = season.period;
     document.getElementById('seasonStatus').value = season.status;
-    document.getElementById('seasonOrder').value = season.order || 1;
+    document.getElementById('seasonOrder').value  = season.order || 1;
   } else {
-    title.textContent = 'Nueva Temporada';
-    form.reset();
+    document.getElementById('seasonModalTitle').textContent = 'Nueva Temporada';
+    document.getElementById('seasonForm').reset();
   }
-  
+
   modal.classList.add('show');
 };
 
@@ -123,12 +161,11 @@ window.closeSeasonModal = () => {
   editingSeasonId = null;
 };
 
-window.editSeason = (seasonId) => openSeasonModal(seasonId);
-
-window.confirmDeleteSeason = (seasonId) => {
-  const season = currentSeasons.find(s => s.id === seasonId);
-  if (confirm(`¿Eliminar la temporada "${season.name}" y TODOS sus animes?`)) {
-    deleteSeasonHandler(seasonId);
+window.editSeason           = (id) => openSeasonModal(id);
+window.confirmDeleteSeason  = (id) => {
+  const s = currentSeasons.find(s => s.id === id);
+  if (confirm(`¿Eliminar la temporada "${s.name}" y TODOS sus animes?`)) {
+    deleteSeasonHandler(id);
   }
 };
 
@@ -146,30 +183,85 @@ const deleteSeasonHandler = async (seasonId) => {
 // ============================================
 // GESTIÓN DE ANIMES
 // ============================================
+
 const loadAllAnimes = async () => {
   const list = document.getElementById('animesList');
   list.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>';
-  
+
   currentAnimes = await getAllAnimes();
-  
+
   if (currentAnimes.length === 0) {
     list.innerHTML = '<p class="empty-state">No hay animes creados</p>';
     return;
   }
-  
-  renderAnimesList(currentAnimes);
+
+  // ✅ Reaplicar filtro guardado sin perderlo
+  const filterSelect = document.getElementById('seasonFilter');
+  if (filterSelect && _savedSeasonFilter !== 'all') {
+    filterSelect.value = _savedSeasonFilter;
+  }
+
+  renderAnimesList(currentAnimes, _savedSeasonFilter);
   updateAnimeSelector();
   updateCharacterAnimeSelector();
 };
 
-const renderAnimesList = (animes) => {
+/**
+ * Renderiza la lista de animes aplicando el filtro de temporada.
+ * Preserva la posición de scroll después del render.
+ * @param {object[]} animes
+ * @param {string}   seasonFilter - 'all' o seasonId
+ */
+const renderAnimesList = (animes, seasonFilter = 'all') => {
   const list = document.getElementById('animesList');
-  
-  list.innerHTML = animes.map(anime => {
+
+  const filtered = seasonFilter === 'all'
+    ? animes
+    : animes.filter(a => a.seasonId === seasonFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<p class="empty-state">No hay animes para esta temporada</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(anime => {
     const season = currentSeasons.find(s => s.id === anime.seasonId);
+
+    // Badge de vinculación MAL
+    const malBadge = anime.malId
+      ? `<span class="meta-tag mal-linked" title="MAL ID: ${anime.malId}">🔗 MAL vinculado</span>`
+      : `<span class="meta-tag mal-unlinked">⚠️ Sin vincular</span>`;
+
+    // Badge de broadcast guardado
+    const broadcastBadge = anime.broadcast
+      ? `<span class="meta-tag" title="Horario guardado en Firebase">
+           📅 ${anime.broadcast.day ?? '?'} ${anime.broadcast.time ?? ''}
+         </span>`
+      : '';
+
+    // Botón de carrusel (toggle schedule)
+    const scheduleActive = anime.scheduleActive !== false; // default true si tiene broadcast
+    const scheduleBtn = anime.malId
+      ? `<button
+           class="btn-schedule ${scheduleActive ? 'btn-schedule--on' : 'btn-schedule--off'}"
+           onclick="toggleScheduleActive('${anime.id}')"
+           title="${scheduleActive ? 'Quitar del carrusel de hoy' : 'Mostrar en carrusel de hoy'}">
+           ${scheduleActive ? '📅 En Carrusel' : '📅 Excluido'}
+         </button>`
+      : '';
+
+    // Botón vincular / re-vincular
+    const linkBtn = `<button
+      class="btn-link-mal"
+      onclick="openMalSearchModal('${anime.id}')"
+      title="${anime.malId ? 'Re-vincular MAL ID' : 'Vincular con MyAnimeList'}">
+      ${anime.malId ? '🔗 Re-vincular' : '🔗 Vincular MAL'}
+    </button>`;
+
     return `
-      <div class="anime-item">
+      <div class="anime-item" id="anime-item-${anime.id}">
         <img src="${anime.cardImage}" alt="${anime.title}" class="anime-item-image">
+
         <div class="anime-item-info">
           <h3>${anime.title}</h3>
           <div class="anime-item-meta">
@@ -181,11 +273,15 @@ const renderAnimesList = (animes) => {
             <span class="meta-tag ${anime.status === 'airing' ? 'category' : 'season'}">
               ${anime.status === 'airing' ? '🔴 En emisión' : '✅ Finalizado'}
             </span>
-            ${anime.malId ? `<span class="meta-tag">🔗 MAL: ${anime.malId}</span>` : ''}
+            ${malBadge}
+            ${broadcastBadge}
           </div>
         </div>
+
         <div class="anime-item-actions">
           <button class="btn-edit" onclick="editAnime('${anime.id}')">✏️ Editar</button>
+          ${linkBtn}
+          ${scheduleBtn}
           <button class="btn-primary" onclick="importCharactersForAnime('${anime.id}')">
             🎭 Importar Personajes
           </button>
@@ -194,73 +290,83 @@ const renderAnimesList = (animes) => {
       </div>
     `;
   }).join('');
+
+  // ✅ Restaurar scroll
+  list.scrollTop = _savedScrollTop;
+};
+
+/**
+ * Guarda el estado actual de filtro y scroll antes
+ * de cualquier operación que pudiera re-renderizar la lista.
+ */
+const saveListState = () => {
+  const filterSelect = document.getElementById('seasonFilter');
+  const list         = document.getElementById('animesList');
+  _savedSeasonFilter = filterSelect ? filterSelect.value : 'all';
+  _savedScrollTop    = list ? list.scrollTop : 0;
 };
 
 window.filterAnimesBySeason = () => {
   const seasonId = document.getElementById('seasonFilter').value;
-  
-  if (seasonId === 'all') {
-    renderAnimesList(currentAnimes);
-  } else {
-    const filtered = currentAnimes.filter(a => a.seasonId === seasonId);
-    renderAnimesList(filtered);
-  }
+  _savedSeasonFilter = seasonId;
+  renderAnimesList(currentAnimes, seasonId);
 };
 
 window.openAnimeModal = (animeId = null) => {
   editingAnimeId = animeId;
   const modal = document.getElementById('animeModal');
-  const title = document.getElementById('animeModalTitle');
-  const form = document.getElementById('animeForm');
-  
+
   if (animeId) {
     const anime = currentAnimes.find(a => a.id === animeId);
-    
     if (anime) {
-      title.textContent = 'Editar Anime';
-      document.getElementById('animeSeasonId').value = anime.seasonId || "";
-      document.getElementById('animeTitle').value = anime.title || "";
-      document.getElementById('animeCategory').value = anime.category || "new";
-      document.getElementById('animeYear').value = anime.year || 2025;
-      document.getElementById('animeStatus').value = anime.status || "airing";
-      document.getElementById('animeOrder').value = anime.order || 1;
-      document.getElementById('animeCardImage').value = anime.cardImage || "";
-      document.getElementById('animePoster').value = anime.poster || "";
-      document.getElementById('animeSynopsis').value = anime.synopsis || "";
-      document.getElementById('animeTrailers').value = anime.trailers ? anime.trailers.join(', ') : '';
-      document.getElementById('animeMalId').value = anime.malId || '';
+      document.getElementById('animeModalTitle').textContent = 'Editar Anime';
+      document.getElementById('animeSeasonId').value  = anime.seasonId  || '';
+      document.getElementById('animeTitle').value     = anime.title     || '';
+      document.getElementById('animeCategory').value  = anime.category  || 'new';
+      document.getElementById('animeYear').value      = anime.year      || 2025;
+      document.getElementById('animeStatus').value    = anime.status    || 'airing';
+      document.getElementById('animeOrder').value     = anime.order     || 1;
+      document.getElementById('animeCardImage').value = anime.cardImage || '';
+      document.getElementById('animePoster').value    = anime.poster    || '';
+      document.getElementById('animeSynopsis').value  = anime.synopsis  || '';
+      document.getElementById('animeTrailers').value  = anime.trailers  ? anime.trailers.join(', ') : '';
+      document.getElementById('animeMalId').value     = anime.malId     || '';
+
+      // ── Cargar sección de override de broadcast ──
+      _renderBroadcastOverrideSection(anime);
     }
   } else {
-    title.textContent = 'Nuevo Anime';
-    form.reset();
-    document.getElementById('animeSeasonId').value = "";
+    document.getElementById('animeModalTitle').textContent = 'Nuevo Anime';
+    document.getElementById('animeForm').reset();
+    document.getElementById('animeSeasonId').value = '';
+    // Ocultar sección broadcast al crear un anime nuevo
+    _hideBroadcastOverrideSection();
   }
-  
+
   modal.classList.add('show');
 };
 
 window.closeAnimeModal = () => {
   document.getElementById('animeModal').classList.remove('show');
   document.getElementById('animeForm').reset();
+  _hideBroadcastOverrideSection();
   editingAnimeId = null;
 };
 
-window.editAnime = (animeId) => openAnimeModal(animeId);
-
-window.confirmDeleteAnime = (animeId) => {
-  const anime = currentAnimes.find(a => a.id === animeId);
+window.editAnime           = (id) => openAnimeModal(id);
+window.confirmDeleteAnime  = (id) => {
+  const anime = currentAnimes.find(a => a.id === id);
   if (confirm(`¿Eliminar "${anime.title}" y TODOS sus episodios y personajes?`)) {
-    deleteAnimeHandler(animeId);
+    deleteAnimeHandler(id);
   }
 };
 
 const deleteAnimeHandler = async (animeId) => {
-  // Eliminar personajes primero
   await deleteCharactersByAnime(animeId);
-  
   const result = await deleteAnime(animeId);
   if (result.success) {
-    alert('✅ Anime eliminado correctamente');
+    alert('✅ Anime eliminado');
+    saveListState();
     await loadAllAnimes();
     await loadSeasons();
   } else {
@@ -269,128 +375,139 @@ const deleteAnimeHandler = async (animeId) => {
 };
 
 // ============================================
-// ✅ IMPORTAR PERSONAJES DESDE JIKAN (SIN LÍMITE)
-// Reemplaza esta función en tu admin-panel.js
+// ✅ NUEVO: TOGGLE CARRUSEL (scheduleActive)
+// Activa o desactiva el anime en el carrusel
+// "Estrenos de Hoy" sin eliminar el malId.
+// ============================================
+
+/**
+ * Alterna el campo `scheduleActive` en Firestore.
+ * - true  → el anime aparece en el carrusel si emite hoy
+ * - false → el anime es excluido del carrusel
+ * @param {string} animeId
+ */
+window.toggleScheduleActive = async (animeId) => {
+  saveListState();
+
+  const anime   = currentAnimes.find(a => a.id === animeId);
+  if (!anime) return;
+
+  // Default: si no tiene el campo, se considera activo
+  const current = anime.scheduleActive !== false;
+  const next    = !current;
+
+  // Feedback visual inmediato (antes de esperar a Firebase)
+  _updateScheduleBtn(animeId, next);
+
+  const result = await updateAnime(animeId, { scheduleActive: next });
+
+  if (result.success) {
+    // Actualizar en memoria sin recargar toda la lista
+    const idx = currentAnimes.findIndex(a => a.id === animeId);
+    if (idx !== -1) currentAnimes[idx].scheduleActive = next;
+
+    const label = next ? 'activado en el carrusel' : 'excluido del carrusel';
+    _showToast(`✅ "${anime.title}" ${label}`);
+  } else {
+    // Revertir si falló
+    _updateScheduleBtn(animeId, current);
+    alert('❌ Error al actualizar estado del carrusel');
+  }
+};
+
+/**
+ * Actualiza el botón de schedule en el DOM sin re-renderizar.
+ * @param {string}  animeId
+ * @param {boolean} isActive
+ */
+const _updateScheduleBtn = (animeId, isActive) => {
+  const btn = document.querySelector(`#anime-item-${animeId} .btn-schedule`);
+  if (!btn) return;
+
+  btn.className = `btn-schedule ${isActive ? 'btn-schedule--on' : 'btn-schedule--off'}`;
+  btn.textContent = isActive ? '📅 En Carrusel' : '📅 Excluido';
+  btn.title = isActive ? 'Quitar del carrusel de hoy' : 'Mostrar en carrusel de hoy';
+};
+
+// ============================================
+// ✅ IMPORTAR PERSONAJES (preserva estado de UI)
 // ============================================
 window.importCharactersForAnime = async (animeId) => {
+  saveListState();
+
   const anime = currentAnimes.find(a => a.id === animeId);
-  
-  if (!anime) {
-    alert('❌ Anime no encontrado');
-    return;
-  }
-  
-  // Verificar si ya tiene personajes
-  const hasChars = await hasCharacters(animeId);
-  if (hasChars) {
-    if (!confirm(`"${anime.title}" ya tiene personajes importados. ¿Deseas reemplazarlos?`)) {
-      return;
-    }
-    await deleteCharactersByAnime(animeId);
-  }
-  
-  // Si no tiene MAL ID, buscar primero
+  if (!anime) { alert('❌ Anime no encontrado'); return; }
+
   if (!anime.malId) {
-    alert('Este anime no tiene un ID de MyAnimeList vinculado. Busca el anime primero.');
+    alert('⚠️ Este anime no tiene un MAL ID vinculado.\nUsa el botón "🔗 Vincular MAL" primero.');
     openMalSearchModal(animeId);
     return;
   }
-  
+
+  const hasChars = await hasCharacters(animeId);
+  if (hasChars) {
+    if (!confirm(`"${anime.title}" ya tiene personajes importados. ¿Reemplazarlos?`)) return;
+    await deleteCharactersByAnime(animeId);
+  }
+
+  const loadingDiv = _showLoadingOverlay('🎭 Importando Personajes', 'Obteniendo personajes desde MyAnimeList...');
+
   try {
-    // ✅ Mostrar loading mejorado
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'importLoading';
-    loadingDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                  background: rgba(13, 2, 33, 0.98); padding: 2.5rem; border-radius: 16px; 
-                  border: 3px solid #48cae4; z-index: 10000; text-align: center; 
-                  box-shadow: 0 0 50px rgba(72, 202, 228, 0.6); max-width: 450px;">
-        <div class="spinner" style="width: 60px; height: 60px; border: 4px solid rgba(72, 202, 228, 0.2); 
-                                     border-top-color: #48cae4; border-radius: 50%; margin: 0 auto 1.5rem; 
-                                     animation: spin 1s linear infinite;"></div>
-        <h3 style="color: #caf0f8; margin-bottom: 1rem; font-size: 1.3rem; text-shadow: 0 0 10px #48cae4;">
-          🎭 Importando Personajes
-        </h3>
-        <p style="color: #ade8f4; line-height: 1.6; margin-bottom: 0.5rem;">
-          Obteniendo <strong>TODOS</strong> los personajes desde MyAnimeList...
-        </p>
-        <p style="color: #6ee7b7; font-size: 0.9rem; font-style: italic;">
-          ⏱️ Esto puede tardar unos segundos
-        </p>
-      </div>
-    `;
-    document.body.appendChild(loadingDiv);
-    
-    console.log(`🎭 Iniciando importación para: ${anime.title}`);
-    console.log(`📡 MAL ID: ${anime.malId}`);
-    
-    // ✅ Obtener personajes desde Jikan (SIN LÍMITE)
     const characters = await window.jikanService.getAnimeCharacters(anime.malId);
-    
+
     if (characters.length === 0) {
       document.body.removeChild(loadingDiv);
       alert('⚠️ No se encontraron personajes para este anime');
       return;
     }
-    
-    // ✅ Mostrar estadísticas en consola
-    const mainCount = characters.filter(c => c.role === 'Main').length;
+
+    const mainCount       = characters.filter(c => c.role === 'Main').length;
     const supportingCount = characters.filter(c => c.role === 'Supporting').length;
-    
-    console.log(`📊 Personajes encontrados:`);
-    console.log(`   • Principales: ${mainCount}`);
-    console.log(`   • Secundarios: ${supportingCount}`);
-    console.log(`   • TOTAL: ${characters.length}`);
-    
-    // Preparar datos para Firebase
+
     const charactersToAdd = characters.map(char => ({
-      name: char.name,
-      image: char.image,
-      role: char.role,
-      animeId: animeId,
+      name:       char.name,
+      image:      char.image,
+      role:       char.role,
+      animeId:    animeId,
       animeTitle: anime.title,
-      malId: char.malId,
-      favorites: char.favorites
+      malId:      char.malId,
+      favorites:  char.favorites
     }));
-    
-    // ✅ Guardar en Firebase
-    console.log('💾 Guardando en Firebase...');
+
     const result = await addMultipleCharacters(charactersToAdd);
-    
     document.body.removeChild(loadingDiv);
-    
+
     if (result.success) {
-      // ✅ Mensaje de éxito detallado
-      const message = `✅ Importación exitosa!\n\n` +
-                     `📊 Total: ${result.count} personajes\n` +
-                     `⭐ Principales: ${mainCount}\n` +
-                     `💥 Secundarios: ${supportingCount}\n\n` +
-                     `Los personajes ya están disponibles en el Tier List.`;
-      
-      alert(message);
-      console.log('✅ Importación completada exitosamente');
+      _showToast(`✅ ${result.count} personajes importados para "${anime.title}"`);
+      console.log(`✅ Importación completa — Main: ${mainCount} / Supporting: ${supportingCount}`);
     } else {
       alert('❌ Error al importar personajes');
-      console.error('❌ Error en la importación:', result.error);
     }
+
   } catch (error) {
-    console.error('❌ Error crítico en importación:', error);
-    alert(`❌ Error al importar personajes.\n\nDetalles: ${error.message}\n\nVerifica la consola para más información.`);
-    
-    const loadingDiv = document.getElementById('importLoading');
-    if (loadingDiv) document.body.removeChild(loadingDiv);
+    console.error('❌ Error en importación:', error);
+    const overlay = document.getElementById('adminLoadingOverlay');
+    if (overlay) document.body.removeChild(overlay);
+    alert(`❌ Error: ${error.message}`);
   }
 };
 
 // ============================================
-// BUSCAR ANIME EN MYANIMELIST
+// ✅ BUSCAR Y VINCULAR EN MYANIMELIST
+//    Al vincular, también guarda el broadcast
+//    en Firebase para eliminar latencia futura.
 // ============================================
 window.openMalSearchModal = (animeId) => {
   const anime = currentAnimes.find(a => a.id === animeId);
-  document.getElementById('malSearchQuery').value = anime.title;
-  document.getElementById('malSearchResults').innerHTML = '';
-  document.getElementById('malSearchModal').classList.add('show');
+  if (!anime) return;
+
+  document.getElementById('malSearchQuery').value        = anime.title;
+  document.getElementById('malSearchResults').innerHTML  = '';
   document.getElementById('malSearchModal').dataset.animeId = animeId;
+  document.getElementById('malSearchModal').classList.add('show');
+
+  // Auto-buscar al abrir
+  searchMal();
 };
 
 window.closeMalSearchModal = () => {
@@ -398,53 +515,101 @@ window.closeMalSearchModal = () => {
 };
 
 window.searchMal = async () => {
-  const query = document.getElementById('malSearchQuery').value.trim();
+  const query      = document.getElementById('malSearchQuery').value.trim();
   const resultsDiv = document.getElementById('malSearchResults');
-  
-  if (!query) {
-    alert('Ingresa un nombre para buscar');
-    return;
-  }
-  
-  resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Buscando...</p></div>';
-  
+
+  if (!query) { alert('Ingresa un nombre para buscar'); return; }
+
+  resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Buscando en MAL...</p></div>';
+
   try {
     const results = await window.jikanService.searchAnime(query);
-    
+
     if (results.length === 0) {
       resultsDiv.innerHTML = '<p class="empty-state">No se encontraron resultados</p>';
       return;
     }
-    
+
     resultsDiv.innerHTML = results.map(anime => `
-      <div class="mal-result" onclick="selectMalAnime(${anime.malId}, '${anime.title}')">
+      <div class="mal-result" onclick="selectMalAnime(${anime.malId}, '${anime.title.replace(/'/g, "\\'")}')">
         <img src="${anime.image}" alt="${anime.title}">
         <div class="mal-result-info">
           <h4>${anime.title}</h4>
           <p>${anime.titleEnglish || ''}</p>
-          <small>MAL ID: ${anime.malId} • ${anime.year || 'N/A'} • ${anime.episodes || '?'} eps • ⭐ ${anime.score || 'N/A'}</small>
+          <small>
+            MAL ID: ${anime.malId}
+            • ${anime.year || 'N/A'}
+            • ${anime.episodes || '?'} eps
+            • ⭐ ${anime.score || 'N/A'}
+          </small>
         </div>
       </div>
     `).join('');
+
   } catch (error) {
-    console.error('Error en búsqueda MAL:', error);
+    console.error('❌ Error en búsqueda MAL:', error);
     resultsDiv.innerHTML = '<p style="color: #ef4444;">❌ Error en la búsqueda</p>';
   }
 };
 
+/**
+ * Vincula un anime del hub con su entrada en MAL.
+ * Además de guardar el malId, consulta el broadcast
+ * y lo almacena en Firebase para que today-schedule
+ * no necesite hacer llamadas a la API en cada carga.
+ * @param {number} malId
+ * @param {string} malTitle
+ */
 window.selectMalAnime = async (malId, malTitle) => {
-  const modal = document.getElementById('malSearchModal');
+  const modal   = document.getElementById('malSearchModal');
   const animeId = modal.dataset.animeId;
-  
-  if (!confirm(`¿Vincular "${malTitle}" a este anime?`)) return;
-  
-  // Actualizar anime con MAL ID
-  await updateAnime(animeId, { malId });
-  
+  const anime   = currentAnimes.find(a => a.id === animeId);
+
+  if (!confirm(`¿Vincular con "${malTitle}" (MAL ID: ${malId})?`)) return;
+
   closeMalSearchModal();
-  await loadAllAnimes();
-  
-  alert(`✅ Anime vinculado. Ahora puedes importar personajes.`);
+  saveListState();
+
+  const loadingDiv = _showLoadingOverlay('🔗 Vinculando...', 'Obteniendo datos de broadcast desde MAL...');
+
+  try {
+    // Obtener broadcast desde Jikan
+    const detailsData = await window.jikanService.getAnimeDetails(malId);
+
+    const updatePayload = {
+      malId,
+      malTitle,
+      // ✅ Guardar broadcast en Firebase para evitar consultas futuras
+      broadcast:      detailsData.broadcast || null,
+      // scheduleActive: true por defecto (visible en el carrusel)
+      scheduleActive: true
+    };
+
+    await updateAnime(animeId, updatePayload);
+
+    // Actualizar en memoria
+    const idx = currentAnimes.findIndex(a => a.id === animeId);
+    if (idx !== -1) {
+      currentAnimes[idx] = { ...currentAnimes[idx], ...updatePayload };
+    }
+
+    document.body.removeChild(loadingDiv);
+
+    const broadcastInfo = detailsData.broadcast
+      ? `📅 ${detailsData.broadcast.day} a las ${detailsData.broadcast.time}`
+      : '(sin horario de broadcast disponible)';
+
+    _showToast(`✅ "${malTitle}" vinculado — ${broadcastInfo}`);
+
+    // ✅ Re-renderizar SOLO la lista, sin recargar la página
+    renderAnimesList(currentAnimes, _savedSeasonFilter);
+
+  } catch (error) {
+    console.error('❌ Error al vincular:', error);
+    const overlay = document.getElementById('adminLoadingOverlay');
+    if (overlay) document.body.removeChild(overlay);
+    alert(`❌ Error al vincular: ${error.message}`);
+  }
 };
 
 // ============================================
@@ -452,28 +617,28 @@ window.selectMalAnime = async (malId, malTitle) => {
 // ============================================
 window.loadEpisodesByAnime = async () => {
   const selector = document.getElementById('animeSelector');
-  const addBtn = document.getElementById('addEpisodeBtn');
-  const list = document.getElementById('episodesList');
-  
+  const addBtn   = document.getElementById('addEpisodeBtn');
+  const list     = document.getElementById('episodesList');
+
   selectedAnimeId = selector.value;
-  
+
   if (!selectedAnimeId) {
     list.innerHTML = '<p class="empty-state">Selecciona un anime</p>';
     addBtn.disabled = true;
     return;
   }
-  
+
   addBtn.disabled = false;
-  list.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>';
-  
+  list.innerHTML  = '<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>';
+
   try {
     currentEpisodes = await getEpisodesByAnime(selectedAnimeId);
-    
+
     if (currentEpisodes.length === 0) {
       list.innerHTML = '<p class="empty-state">Este anime no tiene episodios</p>';
       return;
     }
-    
+
     list.innerHTML = currentEpisodes.map(ep => `
       <div class="episode-item">
         <div class="episode-item-info">
@@ -485,24 +650,18 @@ window.loadEpisodesByAnime = async () => {
         </div>
       </div>
     `).join('');
+
   } catch (error) {
     console.error('❌ Error al cargar episodios:', error);
-    list.innerHTML = '<p class="empty-state" style="color: #ef4444;">Error al cargar episodios</p>';
+    list.innerHTML = '<p class="empty-state" style="color:#ef4444;">Error al cargar episodios</p>';
   }
 };
 
 window.openEpisodeModal = () => {
-  if (!selectedAnimeId) {
-    alert('⚠️ Primero selecciona un anime');
-    return;
-  }
-  
-  const modal = document.getElementById('episodeModal');
-  const nextEpisodeNumber = currentEpisodes.length + 1;
-  document.getElementById('episodeNumber').value = nextEpisodeNumber;
-  document.getElementById('episodeTitle').value = `Episodio ${nextEpisodeNumber}`;
-  
-  modal.classList.add('show');
+  if (!selectedAnimeId) { alert('⚠️ Primero selecciona un anime'); return; }
+  document.getElementById('episodeNumber').value = currentEpisodes.length + 1;
+  document.getElementById('episodeTitle').value  = `Episodio ${currentEpisodes.length + 1}`;
+  document.getElementById('episodeModal').classList.add('show');
 };
 
 window.closeEpisodeModal = () => {
@@ -511,42 +670,42 @@ window.closeEpisodeModal = () => {
 };
 
 window.confirmDeleteEpisode = (episodeId) => {
-  if (confirm('¿Eliminar este episodio?')) {
-    deleteEpisodeHandler(episodeId);
-  }
+  if (confirm('¿Eliminar este episodio?')) deleteEpisodeHandler(episodeId);
 };
 
 const deleteEpisodeHandler = async (episodeId) => {
   const result = await deleteEpisode(episodeId, selectedAnimeId);
   if (result.success) {
-    alert('✅ Episodio eliminado');
+    _showToast('✅ Episodio eliminado');
     await loadEpisodesByAnime();
-    await loadAllAnimes();
+    // Actualizar contador sin recargar toda la lista de animes
+    const idx = currentAnimes.findIndex(a => a.id === selectedAnimeId);
+    if (idx !== -1) currentAnimes[idx].totalEpisodes = currentEpisodes.length;
   } else {
     alert('❌ Error al eliminar episodio');
   }
 };
 
 // ============================================
-// ✅ GESTIÓN DE PERSONAJES
+// GESTIÓN DE PERSONAJES
 // ============================================
 window.loadCharacters = async () => {
-  const list = document.getElementById('charactersList');
+  const list     = document.getElementById('charactersList');
   const selector = document.getElementById('characterAnimeFilter');
-  const animeId = selector.value;
-  
+  const animeId  = selector.value;
+
   list.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>';
-  
+
   try {
-    currentCharacters = animeId === 'all' 
+    currentCharacters = animeId === 'all'
       ? await getAllCharacters()
       : await getCharactersByAnime(animeId);
-    
+
     if (currentCharacters.length === 0) {
       list.innerHTML = '<p class="empty-state">No hay personajes</p>';
       return;
     }
-    
+
     list.innerHTML = currentCharacters.map(char => {
       const anime = currentAnimes.find(a => a.id === char.animeId);
       return `
@@ -565,22 +724,21 @@ window.loadCharacters = async () => {
         </div>
       `;
     }).join('');
+
   } catch (error) {
     console.error('❌ Error al cargar personajes:', error);
-    list.innerHTML = '<p style="color: #ef4444;">Error al cargar personajes</p>';
+    list.innerHTML = '<p style="color:#ef4444;">Error al cargar personajes</p>';
   }
 };
 
 window.confirmDeleteCharacter = (characterId) => {
-  if (confirm('¿Eliminar este personaje?')) {
-    deleteCharacterHandler(characterId);
-  }
+  if (confirm('¿Eliminar este personaje?')) deleteCharacterHandler(characterId);
 };
 
 const deleteCharacterHandler = async (characterId) => {
   const result = await deleteCharacter(characterId);
   if (result.success) {
-    alert('✅ Personaje eliminado');
+    _showToast('✅ Personaje eliminado');
     await loadCharacters();
   } else {
     alert('❌ Error al eliminar personaje');
@@ -591,26 +749,24 @@ const deleteCharacterHandler = async (characterId) => {
 // ACTUALIZAR SELECTORES
 // ============================================
 const updateSeasonSelectors = () => {
-  const selectors = ['animeSeasonId', 'seasonFilter'];
-  
-  selectors.forEach(selectId => {
+  ['animeSeasonId', 'seasonFilter'].forEach(selectId => {
     const select = document.getElementById(selectId);
     if (!select) return;
-    
-    const currentValue = select.value;
+
+    const currentValue   = select.value;
     const isFilterSelect = selectId === 'seasonFilter';
-    
-    select.innerHTML = isFilterSelect ? 
-      '<option value="all">Todas las temporadas</option>' : 
-      '<option value="">-- Selecciona temporada --</option>';
-    
+
+    select.innerHTML = isFilterSelect
+      ? '<option value="all">Todas las temporadas</option>'
+      : '<option value="">-- Selecciona temporada --</option>';
+
     currentSeasons.forEach(season => {
-      const option = document.createElement('option');
-      option.value = season.id;
-      option.textContent = season.name;
-      select.appendChild(option);
+      const opt = document.createElement('option');
+      opt.value       = season.id;
+      opt.textContent = season.name;
+      select.appendChild(opt);
     });
-    
+
     if (currentValue) select.value = currentValue;
   });
 };
@@ -618,153 +774,332 @@ const updateSeasonSelectors = () => {
 const updateAnimeSelector = () => {
   const select = document.getElementById('animeSelector');
   if (!select) return;
-  
+
   select.innerHTML = '<option value="">-- Selecciona un anime --</option>';
-  
   currentAnimes.forEach(anime => {
-    const option = document.createElement('option');
-    option.value = anime.id;
-    option.textContent = anime.title;
-    select.appendChild(option);
+    const opt = document.createElement('option');
+    opt.value       = anime.id;
+    opt.textContent = anime.title;
+    select.appendChild(opt);
   });
 };
 
 const updateCharacterAnimeSelector = () => {
   const select = document.getElementById('characterAnimeFilter');
   if (!select) return;
-  
+
   select.innerHTML = '<option value="all">Todos los animes</option>';
-  
   currentAnimes.forEach(anime => {
-    const option = document.createElement('option');
-    option.value = anime.id;
-    option.textContent = anime.title;
-    select.appendChild(option);
+    const opt = document.createElement('option');
+    opt.value       = anime.id;
+    opt.textContent = anime.title;
+    select.appendChild(opt);
   });
 };
 
 const fillSeasonSelect = async () => {
   const select = document.getElementById('animeSeasonId');
-  
-  if (!select) {
-    console.error('❌ No se encontró el elemento animeSeasonId');
-    return;
-  }
-  
+  if (!select) return;
+
   if (currentSeasons.length === 0) {
     select.innerHTML = '<option value="">No hay temporadas creadas</option>';
     return;
   }
 
   select.innerHTML = '<option value="">-- Selecciona temporada --</option>';
-  
   currentSeasons.forEach(season => {
-    const option = document.createElement('option');
-    option.value = season.id;
-    option.textContent = season.name;
-    select.appendChild(option);
+    const opt = document.createElement('option');
+    opt.value       = season.id;
+    opt.textContent = season.name;
+    select.appendChild(opt);
   });
 };
 
 // ============================================
-// INICIALIZAR FORMULARIOS
+// FORMULARIOS
 // ============================================
 const initForms = () => {
-  // Formulario de temporada
+  // ── Temporada ──
   document.getElementById('seasonForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const seasonData = {
-      name: document.getElementById('seasonName').value,
-      emoji: document.getElementById('seasonEmoji').value,
+      name:   document.getElementById('seasonName').value,
+      emoji:  document.getElementById('seasonEmoji').value,
       period: document.getElementById('seasonPeriod').value,
       status: document.getElementById('seasonStatus').value,
-      order: parseInt(document.getElementById('seasonOrder').value)
+      order:  parseInt(document.getElementById('seasonOrder').value)
     };
-    
+
     if (editingSeasonId) {
       await window.firebaseDB.seasonsRef.doc(editingSeasonId).update(seasonData);
-      alert('✅ Temporada actualizada');
+      _showToast('✅ Temporada actualizada');
     } else {
       const result = await addSeason(seasonData);
-      if (result.success) alert('✅ Temporada creada');
+      if (result.success) _showToast('✅ Temporada creada');
     }
-    
+
     closeSeasonModal();
     await loadSeasons();
     await fillSeasonSelect();
   });
-  
-  // Formulario de anime
+
+  // ── Anime ──
   document.getElementById('animeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const seasonId = document.getElementById('animeSeasonId').value;
-    
-    if (!seasonId) {
-      alert('⚠️ Debes seleccionar una temporada');
-      return;
-    }
-    
+    if (!seasonId) { alert('⚠️ Debes seleccionar una temporada'); return; }
+
     const trailersText = document.getElementById('animeTrailers').value;
-    const trailers = trailersText ? trailersText.split(',').map(t => t.trim()) : [];
-    
+    const trailers     = trailersText ? trailersText.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+    const malIdRaw = document.getElementById('animeMalId').value;
+
+    // ── Leer override de broadcast si fue definido ──
+    const overrideDay  = document.getElementById('broadcastOverrideDay')?.value  || '';
+    const overrideTime = document.getElementById('broadcastOverrideTime')?.value || '';
+
+    // broadcastOverride solo se guarda si ambos campos están definidos.
+    // Si se limpia (ambos vacíos), se guarda null para indicar "usar MAL".
+    let broadcastOverride = null;
+    if (overrideDay && overrideTime) {
+      broadcastOverride = {
+        day:      overrideDay,   // e.g. "Tuesdays"
+        time:     overrideTime,  // e.g. "23:30"
+        timezone: 'Asia/Tokyo'   // siempre JST (mismo formato que MAL)
+      };
+    }
+
     const animeData = {
       seasonId: seasonId,
-      title: document.getElementById('animeTitle').value,
+      title:    document.getElementById('animeTitle').value,
       category: document.getElementById('animeCategory').value,
-      year: parseInt(document.getElementById('animeYear').value),
-      status: document.getElementById('animeStatus').value,
-      order: parseInt(document.getElementById('animeOrder').value),
+      year:     parseInt(document.getElementById('animeYear').value),
+      status:   document.getElementById('animeStatus').value,
+      order:    parseInt(document.getElementById('animeOrder').value),
       cardImage: document.getElementById('animeCardImage').value,
-      poster: document.getElementById('animePoster').value,
-      synopsis: document.getElementById('animeSynopsis').value,
-      trailers: trailers,
-      malId: parseInt(document.getElementById('animeMalId').value) || null,
-      totalEpisodes: 0
+      poster:    document.getElementById('animePoster').value,
+      synopsis:  document.getElementById('animeSynopsis').value,
+      trailers,
+      malId:            malIdRaw ? parseInt(malIdRaw) : null,
+      broadcastOverride // null = usar MAL, objeto = usar este
     };
-    
+
+    saveListState();
+
     if (editingAnimeId) {
       await updateAnime(editingAnimeId, animeData);
-      alert('✅ Anime actualizado');
+      _showToast('✅ Anime actualizado');
     } else {
       const result = await addAnime(animeData);
-      if (result.success) alert('✅ Anime creado');
+      if (result.success) _showToast('✅ Anime creado');
     }
-    
+
     closeAnimeModal();
     await loadAllAnimes();
     await loadSeasons();
   });
-  
-  // Formulario de episodio
+
+  // ── Episodio ──
   document.getElementById('episodeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    if (!selectedAnimeId) {
-      alert('⚠️ Error: No hay un anime seleccionado');
-      return;
-    }
-    
+
+    if (!selectedAnimeId) { alert('⚠️ No hay anime seleccionado'); return; }
+
     const episodeData = {
-      animeId: selectedAnimeId,
+      animeId:       selectedAnimeId,
       episodeNumber: parseInt(document.getElementById('episodeNumber').value),
-      title: document.getElementById('episodeTitle').value,
-      duration: document.getElementById('episodeDuration').value,
-      videoUrl: document.getElementById('episodeVideoUrl').value
+      title:         document.getElementById('episodeTitle').value,
+      duration:      document.getElementById('episodeDuration').value,
+      videoUrl:      document.getElementById('episodeVideoUrl').value
     };
-    
+
     const result = await addEpisode(episodeData);
-    
+
     if (result.success) {
-      alert('✅ Episodio agregado correctamente');
+      _showToast('✅ Episodio agregado');
       closeEpisodeModal();
       await loadEpisodesByAnime();
-      await loadAllAnimes();
     } else {
       alert('❌ Error al agregar episodio');
     }
   });
 };
 
-console.log('🎛️ Admin Panel JS cargado con soporte de personajes');
+// ============================================
+// HELPERS DE UI
+// ============================================
+
+/**
+ * Muestra un overlay de carga a pantalla completa.
+ * @param {string} title
+ * @param {string} subtitle
+ * @returns {HTMLElement} - el elemento creado (para eliminarlo luego)
+ */
+const _showLoadingOverlay = (title, subtitle) => {
+  const div = document.createElement('div');
+  div.id = 'adminLoadingOverlay';
+  div.style.cssText = `
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(13, 2, 33, 0.95);
+    display: flex; align-items: center; justify-content: center;
+  `;
+  div.innerHTML = `
+    <div style="text-align: center; padding: 2.5rem; border-radius: 16px;
+                border: 2px solid #48cae4; max-width: 420px;
+                box-shadow: 0 0 40px rgba(72,202,228,0.4);">
+      <div class="spinner" style="width:56px;height:56px;border:4px solid rgba(72,202,228,0.2);
+                                   border-top-color:#48cae4;border-radius:50%;margin:0 auto 1.5rem;
+                                   animation:spin 1s linear infinite;"></div>
+      <h3 style="color:#caf0f8;margin:0 0 0.75rem;font-size:1.2rem;">${title}</h3>
+      <p style="color:#ade8f4;margin:0;font-size:0.9rem;">${subtitle}</p>
+    </div>
+  `;
+  document.body.appendChild(div);
+  return div;
+};
+
+/**
+ * Muestra un toast de notificación no bloqueante.
+ * Se auto-elimina en 3 segundos.
+ * @param {string} message
+ */
+const _showToast = (message) => {
+  // Eliminar toast anterior si existe
+  const prev = document.getElementById('adminToast');
+  if (prev) prev.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'adminToast';
+  toast.style.cssText = `
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+    background: rgba(13,2,33,0.95); border: 1px solid #48cae4;
+    color: #caf0f8; padding: 0.85rem 1.5rem; border-radius: 10px;
+    font-size: 0.9rem; box-shadow: 0 0 20px rgba(72,202,228,0.3);
+    animation: toastIn 0.25s ease;
+    max-width: 360px;
+  `;
+  toast.textContent = message;
+
+  // Añadir keyframe si no existe
+  if (!document.getElementById('toastStyle')) {
+    const style = document.createElement('style');
+    style.id = 'toastStyle';
+    style.textContent = `
+      @keyframes toastIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
+};
+
+
+// ============================================
+// HELPERS — BROADCAST OVERRIDE SECTION
+// ============================================
+
+/** Mapa día en inglés (valor de MAL) → etiqueta en español */
+const _DAY_LABELS_ES = {
+  Mondays: 'Lunes', Tuesdays: 'Martes', Wednesdays: 'Miércoles',
+  Thursdays: 'Jueves', Fridays: 'Viernes', Saturdays: 'Sábado', Sundays: 'Domingo'
+};
+
+/**
+ * Renderiza la sección de override de broadcast en el modal de edición.
+ * Muestra el valor actual de MAL, el override guardado (si existe),
+ * y permite editar o limpiar el override.
+ *
+ * @param {object} anime - Objeto anime de Firebase
+ */
+const _renderBroadcastOverrideSection = (anime) => {
+  const section   = document.getElementById('broadcastOverrideSection');
+  const malInfo   = document.getElementById('broadcastMalInfo');
+  const badge     = document.getElementById('broadcastSourceBadge');
+  const clearBtn  = document.getElementById('clearBroadcastOverride');
+  const daySelect = document.getElementById('broadcastOverrideDay');
+  const timeInput = document.getElementById('broadcastOverrideTime');
+
+  if (!section) return;
+  section.style.display = 'block';
+
+  // ── Info del dato de MAL ──
+  if (anime.broadcast?.day) {
+    const dayLabel = _DAY_LABELS_ES[anime.broadcast.day] ?? anime.broadcast.day;
+    malInfo.innerHTML = `
+      <div class="broadcast-mal-row">
+        <span class="broadcast-source-label">📡 MAL:</span>
+        <span class="broadcast-mal-value">
+          ${dayLabel} — ${anime.broadcast.time ?? '??:??'} (Asia/Tokyo)
+        </span>
+      </div>
+    `;
+  } else {
+    malInfo.innerHTML = `
+      <div class="broadcast-mal-row broadcast-mal-row--empty">
+        <span class="broadcast-source-label">📡 MAL:</span>
+        <span class="broadcast-mal-value--empty">Sin horario — vincula el anime para obtenerlo</span>
+      </div>
+    `;
+  }
+
+  // ── Cargar override guardado (si existe) ──
+  if (anime.broadcastOverride?.day) {
+    daySelect.value = anime.broadcastOverride.day;
+    timeInput.value = anime.broadcastOverride.time ?? '';
+    badge.textContent   = '⚠️ Override activo';
+    badge.className     = 'broadcast-override-badge broadcast-override-badge--active';
+    clearBtn.style.display = 'block';
+  } else {
+    daySelect.value = '';
+    timeInput.value = '';
+    badge.textContent   = '✅ Usando dato de MAL';
+    badge.className     = 'broadcast-override-badge broadcast-override-badge--mal';
+    clearBtn.style.display = 'none';
+  }
+
+  // Actualizar badge y botón limpiar al cambiar los campos
+  daySelect.onchange = timeInput.onchange = _updateOverrideBadge;
+};
+
+/**
+ * Actualiza el badge de estado y la visibilidad del botón limpiar
+ * en tiempo real mientras el admin edita los campos.
+ */
+const _updateOverrideBadge = () => {
+  const badge     = document.getElementById('broadcastSourceBadge');
+  const clearBtn  = document.getElementById('clearBroadcastOverride');
+  const day       = document.getElementById('broadcastOverrideDay')?.value;
+  const time      = document.getElementById('broadcastOverrideTime')?.value;
+
+  if (day && time) {
+    badge.textContent = '⚠️ Override activo';
+    badge.className   = 'broadcast-override-badge broadcast-override-badge--active';
+    clearBtn.style.display = 'block';
+  } else {
+    badge.textContent = '✅ Usando dato de MAL';
+    badge.className   = 'broadcast-override-badge broadcast-override-badge--mal';
+    clearBtn.style.display = 'none';
+  }
+};
+
+/**
+ * Limpia los campos de override y resetea a "usar MAL".
+ * El guardado real a Firebase ocurre al hacer submit del form.
+ */
+window.clearBroadcastOverride = () => {
+  document.getElementById('broadcastOverrideDay').value  = '';
+  document.getElementById('broadcastOverrideTime').value = '';
+  _updateOverrideBadge();
+};
+
+/** Oculta la sección de broadcast (al crear nuevo anime o cerrar modal) */
+const _hideBroadcastOverrideSection = () => {
+  const section = document.getElementById('broadcastOverrideSection');
+  if (section) section.style.display = 'none';
+};
+
+console.log('🎛️ Admin Panel v3.0 cargado');
+console.log('✅ Vinculación MAL + preservación de filtros + toggle de carrusel');

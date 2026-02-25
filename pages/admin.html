@@ -253,6 +253,55 @@
           <small>Formato: URLs de YouTube embed separadas por comas</small>
         </div>
 
+        <!-- ══════════════════════════════════════════════
+             SECCIÓN: OVERRIDE DE HORARIO DE EMISIÓN
+             Visible solo al editar. Permite corregir el
+             día/hora si MAL tiene datos desactualizados.
+             broadcastOverride tiene prioridad sobre broadcast.
+             ══════════════════════════════════════════════ -->
+        <div class="broadcast-override-section" id="broadcastOverrideSection" style="display:none;">
+
+          <div class="broadcast-override-header">
+            <h4 class="broadcast-override-title">📅 Horario de Emisión</h4>
+            <span class="broadcast-override-badge" id="broadcastSourceBadge"></span>
+          </div>
+
+          <!-- Muestra el valor actual de MAL como referencia -->
+          <div class="broadcast-mal-info" id="broadcastMalInfo"></div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="broadcastOverrideDay">Día de emisión (override)</label>
+              <select id="broadcastOverrideDay">
+                <option value="">— Usar dato de MAL —</option>
+                <option value="Mondays">Lunes</option>
+                <option value="Tuesdays">Martes</option>
+                <option value="Wednesdays">Miércoles</option>
+                <option value="Thursdays">Jueves</option>
+                <option value="Fridays">Viernes</option>
+                <option value="Saturdays">Sábado</option>
+                <option value="Sundays">Domingo</option>
+              </select>
+              <small>Solo necesario si MAL tiene el día incorrecto</small>
+            </div>
+            <div class="form-group">
+              <label for="broadcastOverrideTime">Hora (en JST / Asia/Tokyo)</label>
+              <input type="time" id="broadcastOverrideTime">
+              <small>Hora de Japón — igual que el formato de MAL</small>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="btn-clear-override"
+            id="clearBroadcastOverride"
+            onclick="clearBroadcastOverride()"
+          >
+            🔄 Quitar override — volver a usar dato de MAL
+          </button>
+
+        </div>
+
         <div class="modal-footer">
           <button type="button" class="btn-secondary" onclick="closeAnimeModal()">Cancelar</button>
           <button type="submit" class="btn-primary">Guardar Anime</button>

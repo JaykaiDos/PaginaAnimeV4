@@ -30,6 +30,7 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="/styles/api-features.css">
 </head>
 
 <body>
@@ -71,6 +72,33 @@
     <h3 class="stat-number" id="favCount">0</h3>
     <p class="stat-label">Favoritos</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTRENOS DE HOY -->
+  <section class="today-schedule-section" id="todayScheduleSection">
+    <div class="container">
+      <h2 class="section-title" id="scheduleDayTitle">
+        📅 Estrenos de Hoy
+      </h2>
+      <p class="schedule-subtitle">
+        Animes con capítulo nuevo programado para hoy. ¡No te pierdas los episodios!
+      </p>
+
+      <!-- Carrusel con scroll horizontal -->
+      <div class="schedule-carousel-wrapper">
+        <button class="schedule-nav schedule-nav--prev"
+                onclick="window.todaySchedule.scrollCarousel(-1)"
+                aria-label="Anterior">‹</button>
+
+        <div class="schedule-carousel" id="scheduleCarousel">
+          <!-- Poblado dinámicamente por today-schedule.js -->
+        </div>
+
+        <button class="schedule-nav schedule-nav--next"
+                onclick="window.todaySchedule.scrollCarousel(1)"
+                aria-label="Siguiente">›</button>
       </div>
     </div>
   </section>
@@ -245,5 +273,7 @@
 
 <!-- Tu script principal (YA MODIFICADO) -->
 <script src="js/main.js"></script>
+<script src="js/jikan-service.js"></script>
+<script src="js/today-schedule.js"></script>
 </body>
 </html>

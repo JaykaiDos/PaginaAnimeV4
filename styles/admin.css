@@ -785,3 +785,213 @@ html {
     margin: 0 auto;
   }
 }
+
+/* ============================================
+   ADMIN PANEL — ESTILOS ADICIONALES v3
+   Autor: Jaykai2
+
+   Cubre:
+   - Botón "🔗 Vincular MAL"
+   - Botón "📅 En Carrusel / Excluido"
+   - Badge "MAL vinculado / Sin vincular"
+   - Toast de notificación
+   ============================================ */
+
+/* ── Botón Vincular MAL ── */
+.btn-link-mal {
+  padding: 0.5rem 0.9rem;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  border-radius: 8px;
+  color: #fde047;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-link-mal:hover {
+  background: rgba(234, 179, 8, 0.3);
+  border-color: #fde047;
+}
+
+/* ── Botón toggle carrusel ── */
+.btn-schedule {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border: 1px solid;
+}
+
+/* Activo: verde */
+.btn-schedule--on {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+}
+
+.btn-schedule--on:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: #6ee7b7;
+}
+
+/* Excluido: rojo/gris */
+.btn-schedule--off {
+  background: rgba(100, 116, 139, 0.15);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #94a3b8;
+}
+
+.btn-schedule--off:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+/* ── Badges de MAL ── */
+.meta-tag.mal-linked {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.meta-tag.mal-unlinked {
+  background: rgba(234, 179, 8, 0.12);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+/* ── Asegurar que las acciones no colapsen en mobile ── */
+@media (max-width: 768px) {
+  .anime-item {
+    flex-wrap: wrap;
+  }
+
+  .anime-item-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .anime-item-actions button {
+    flex: 1 1 140px;
+  }
+}
+/* ============================================
+   BROADCAST OVERRIDE SECTION — admin v4
+   Sección dentro del modal de edición de anime
+   para sobrescribir el horario de MAL.
+   ============================================ */
+
+/* Contenedor principal de la sección */
+.broadcast-override-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(72, 202, 228, 0.04);
+  border: 1px solid rgba(72, 202, 228, 0.2);
+  border-radius: 12px;
+}
+
+/* Header: título + badge de estado */
+.broadcast-override-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.broadcast-override-title {
+  font-size: 0.95rem;
+  color: #caf0f8;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Badge: "✅ Usando dato de MAL" / "⚠️ Override activo" */
+.broadcast-override-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+}
+
+.broadcast-override-badge--mal {
+  background: rgba(110, 231, 183, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(110, 231, 183, 0.3);
+}
+
+.broadcast-override-badge--active {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+/* Fila que muestra el dato actual de MAL */
+.broadcast-mal-info {
+  margin-bottom: 1rem;
+}
+
+.broadcast-mal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+}
+
+.broadcast-mal-row--empty {
+  opacity: 0.6;
+}
+
+.broadcast-source-label {
+  color: #48cae4;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.broadcast-mal-value {
+  color: #ade8f4;
+}
+
+.broadcast-mal-value--empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Botón para limpiar el override */
+.btn-clear-override {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-override:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}
+
+/* Badge en card del carrusel cuando hay override activo */
+.schedule-card__override-badge {
+  font-size: 0.7rem;
+  color: #fbbf24;
+  margin: 0.2rem 0 0;
+  opacity: 0.85;
+}
