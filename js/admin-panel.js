@@ -240,13 +240,28 @@ const renderAnimesList = (animes, seasonFilter = 'all') => {
       : '';
 
     // Botón de carrusel (toggle schedule)
-    const scheduleActive = anime.scheduleActive !== false; // default true si tiene broadcast
+    // Animes finalizados o sin broadcast no deben mostrarse en el carrusel.
+    const scheduleActive  = anime.scheduleActive !== false;
+    const isFinished      = anime.status === 'completed' || anime.status === 'finished';
+    const hasBroadcast    = !!anime.broadcast;
+
+    // Label descriptivo: indica por qué está excluido si aplica
+    const scheduleBtnLabel = scheduleActive
+      ? '📅 En Carrusel'
+      : (isFinished ? '📅 Finalizado' : '📅 Excluido');
+
+    const scheduleBtnTitle = scheduleActive
+      ? 'Quitar del carrusel de estrenos de hoy'
+      : (isFinished
+          ? 'Anime finalizado — no aparece en estrenos'
+          : 'Activar para que aparezca en estrenos de hoy');
+
     const scheduleBtn = anime.malId
       ? `<button
            class="btn-schedule ${scheduleActive ? 'btn-schedule--on' : 'btn-schedule--off'}"
            onclick="toggleScheduleActive('${anime.id}')"
-           title="${scheduleActive ? 'Quitar del carrusel de hoy' : 'Mostrar en carrusel de hoy'}">
-           ${scheduleActive ? '📅 En Carrusel' : '📅 Excluido'}
+           title="${scheduleBtnTitle}">
+           ${scheduleBtnLabel}
          </button>`
       : '';
 
@@ -584,39 +599,60 @@ window.selectMalAnime = async (malId, malTitle) => {
   try {
     let broadcast   = null;
     let anilistId   = null;
+    let apiStatus   = null; // 'airing' | 'finished' | 'upcoming' — desde la API
     let dataSource  = 'ninguna';
 
     // ── Paso 1: Intentar AniList (más preciso) ──
     if (window.anilistService) {
       try {
         const aniData = await window.anilistService.getAnimeDetails({ malId });
-        broadcast     = aniData.broadcast || null;
-        anilistId     = aniData.anilistId || null;
+        broadcast     = aniData.broadcast  || null;
+        anilistId     = aniData.anilistId  || null;
+        apiStatus     = aniData.status     || null; // ✅ capturar estado
         dataSource    = 'AniList';
-        console.log(`✅ Broadcast desde AniList:`, broadcast);
+        console.log(`✅ Broadcast desde AniList:`, broadcast, `| Status: ${apiStatus}`);
       } catch (aniErr) {
         console.warn('⚠️ AniList falló, probando Jikan...', aniErr.message);
       }
     }
 
-    // ── Paso 2: Fallback a Jikan si AniList no devolvió broadcast ──
-    if (!broadcast && window.jikanService) {
+    // ── Paso 2: Fallback a Jikan si AniList no devolvió datos ──
+    if (!apiStatus && window.jikanService) {
       try {
         const jikanData = await window.jikanService.getAnimeDetails(malId);
         broadcast       = jikanData.broadcast || null;
+        apiStatus       = jikanData.status    || null; // ✅ capturar estado de Jikan
         dataSource      = 'Jikan/MAL';
-        console.log(`✅ Broadcast desde Jikan:`, broadcast);
+        console.log(`✅ Broadcast desde Jikan:`, broadcast, `| Status: ${apiStatus}`);
       } catch (jikanErr) {
         console.warn('⚠️ Jikan también falló:', jikanErr.message);
       }
     }
 
+    // ── Determinar estado final ──
+    // 'airing'   → en emisión: broadcast activo, aparece en carrusel
+    // 'finished' → finalizado: limpiar broadcast, excluir del carrusel
+    // 'upcoming' → próximamente: sin broadcast aún, excluir del carrusel
+    // null       → sin datos de API: no tocar el estado actual del anime
+    const isAiring = apiStatus === 'airing';
+
+    // Mapear 'airing' → 'airing' y cualquier otro → 'completed'
+    // para que coincida con los valores del campo `status` en Firebase
+    const STATUS_TO_HUB = {
+      'airing':   'airing',
+      'finished': 'completed',
+      'upcoming': 'airing'     // próximo se trata como en emisión para el form
+    };
+    const hubStatus = apiStatus ? (STATUS_TO_HUB[apiStatus] ?? 'completed') : null;
+
     const updatePayload = {
       malId,
       malTitle,
-      anilistId,              // null si no se encontró en AniList
-      broadcast,              // null si ninguna API devolvió datos
-      scheduleActive: true
+      anilistId,
+      broadcast:      broadcast,   // null limpia el campo viejo en Firebase
+      scheduleActive: isAiring,    // false automático para finalizados
+      // Actualizar status solo si la API devolvió datos confiables
+      ...(hubStatus !== null && { status: hubStatus })
     };
 
     await updateAnime(animeId, updatePayload);
@@ -631,9 +667,11 @@ window.selectMalAnime = async (malId, malTitle) => {
 
     const broadcastInfo = broadcast
       ? `📅 ${broadcast.day} ${broadcast.time}${broadcast.airingAt ? ' (timestamp exacto)' : ''}`
-      : '⚠️ Sin horario disponible';
+      : (apiStatus === 'finished' ? '✅ Finalizado' : '⚠️ Sin horario disponible');
 
-    _showToast(`✅ "${malTitle}" vinculado via ${dataSource} — ${broadcastInfo}`);
+    const statusLabel = hubStatus === 'airing' ? '🔴 En emisión' : hubStatus === 'completed' ? '✅ Finalizado' : '';
+
+    _showToast(`✅ "${malTitle}" vinculado via ${dataSource} — ${broadcastInfo}${statusLabel ? ' · ' + statusLabel : ''}`);
 
     // Re-renderizar solo la lista, sin recargar la página
     renderAnimesList(currentAnimes, _savedSeasonFilter);

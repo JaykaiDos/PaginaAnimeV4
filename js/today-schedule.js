@@ -203,18 +203,30 @@ const resolveEffectiveBroadcast = (anime) => {
 /**
  * Filtra los animes del hub que emiten HOY en el timezone
  * local del usuario. Usa broadcastOverride si está definido,
- * sino usa el broadcast de MAL.
+ * sino usa el broadcast de MAL/AniList.
+ *
+ * Barreras de seguridad (en orden):
+ *  1. status === 'completed'/'finished' → excluir siempre
+ *  2. scheduleActive === false → excluido manualmente por admin
+ *  3. Sin datos de broadcast → no hay horario guardado
+ *  4. broadcastIsToday → el día de emisión coincide con hoy
  *
  * @param {object[]} hubAnimes
  * @returns {object[]}
  */
 const filterAnimesForToday = (hubAnimes) => {
   return hubAnimes.filter(anime => {
+    // Barrera 1: estado finalizado — nunca en el carrusel
+    if (anime.status === 'completed' || anime.status === 'finished') return false;
+
+    // Barrera 2: excluido manualmente desde el admin
     if (anime.scheduleActive === false) return false;
 
+    // Barrera 3: sin datos de broadcast
     const effective = resolveEffectiveBroadcast(anime);
     if (!effective) return false;
 
+    // Barrera 4: verificar que el día de emisión sea hoy
     return broadcastIsToday(effective);
   });
 };

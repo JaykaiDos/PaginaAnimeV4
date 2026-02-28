@@ -231,12 +231,15 @@ const getAnimeDetailsAniList = async ({ anilistId, malId }) => {
 
   if (!media) throw new Error('Anime no encontrado en AniList');
 
-  // Extraer próximo episodio
-  const nextAiring = _extractNextAiring(media);
+  // Solo extraer nextAiring si el anime está ACTUALMENTE EN EMISIÓN.
+  // Un anime FINISHED nunca debe tener broadcast ni nextAiring,
+  // aunque airingSchedule tenga datos históricos en AniList.
+  const isReleasing = media.status === 'RELEASING' || media.status === 'HIATUS';
 
-  // Inferir broadcast (día/hora) desde el timestamp del próximo episodio
-  // Esto es más preciso que el campo broadcast.day de MAL
-  const broadcast = nextAiring
+  const nextAiring = isReleasing ? _extractNextAiring(media) : null;
+
+  // Inferir broadcast SOLO si está en emisión y tiene próximo episodio real
+  const broadcast = (isReleasing && nextAiring)
     ? _inferBroadcastFromTimestamp(nextAiring.airingAt)
     : null;
 
