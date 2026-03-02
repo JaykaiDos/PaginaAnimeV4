@@ -10,6 +10,33 @@
      de episodios subidos después de cargarlos de Firebase
    ============================================ */
 
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Convierte cualquier URL de YouTube al formato embed
+ * requerido por iframes. Misma lógica que seasons.js.
+ * Soporta: watch?v=ID, youtu.be/ID, y embeds directos.
+ * @param {string} url
+ * @returns {string} URL en formato embed
+ */
+const _toYouTubeEmbed = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  if (url.includes('/embed/')) return url;
+  let videoId = '';
+  if (url.includes('v=')) {
+    videoId = url.split('v=')[1].split('&')[0];
+  } else if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1].split('?')[0];
+  } else {
+    videoId = url.split('/').pop().split('?')[0];
+  }
+  if (!videoId) return url;
+  return `https://www.youtube.com/embed/${videoId}`;
+};
+
 // ============================================
 // ESTADO DE LA APLICACIÓN
 // ============================================
@@ -269,7 +296,7 @@ const renderAnimeDetails = (anime) => {
       <h3>🎬 Trailers</h3>
       <div class="trailers-grid">
         ${anime.trailers.map(trailer => `
-          <iframe src="${trailer}" title="Trailer" allowfullscreen></iframe>
+          <iframe src="${_toYouTubeEmbed(trailer)}" title="Trailer" allowfullscreen loading="lazy"></iframe>
         `).join('')}
       </div>
     </div>
