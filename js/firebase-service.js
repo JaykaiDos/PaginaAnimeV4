@@ -44,6 +44,23 @@ window.firebaseService = {
     }
   },
 
+  /**
+   * Actualiza los datos de una temporada existente en Firestore.
+   * @param {string} seasonId - ID del documento de la temporada
+   * @param {object} seasonData - Campos a actualizar (name, emoji, period, status, order)
+   * @returns {{ success: boolean, error?: object }}
+   */
+  updateSeason: async (seasonId, seasonData) => {
+    try {
+      await window.firebaseDB.seasonsRef.doc(seasonId).update(seasonData);
+      console.log('✅ Temporada actualizada:', seasonId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error al actualizar temporada:', error);
+      return { success: false, error };
+    }
+  },
+
   // ============================================
   // ANIMES
   // ============================================

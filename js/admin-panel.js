@@ -51,7 +51,7 @@
 // ESTADO GLOBAL
 // ============================================
 const { 
-  getAllSeasons, addSeason, deleteSeason,
+  getAllSeasons, addSeason, updateSeason, deleteSeason,
   getAllAnimes, getAnimesBySeason, addAnime, updateAnime, deleteAnime,
   getEpisodesByAnime, addEpisode, deleteEpisode,
   getAllCharacters, getCharactersByAnime, addCharacter,
@@ -968,15 +968,22 @@ const initForms = () => {
     e.preventDefault();
 
     const seasonData = {
-      name:   document.getElementById('seasonName').value,
-      emoji:  document.getElementById('seasonEmoji').value,
-      period: document.getElementById('seasonPeriod').value,
+      name:   document.getElementById('seasonName').value.trim(),
+      emoji:  document.getElementById('seasonEmoji').value.trim(),
+      period: document.getElementById('seasonPeriod').value.trim(),
       status: document.getElementById('seasonStatus').value,
       order:  parseInt(document.getElementById('seasonOrder').value)
     };
 
     if (editingSeasonId) {
-      await updateAnime(editingSeasonId, seasonData); // reutiliza updateAnime si aplica
+      // ✅ FIX: Se usa updateSeason (colección 'seasons') en lugar de updateAnime
+      const result = await updateSeason(editingSeasonId, seasonData);
+      if (result.success) {
+        _showToast('✅ Temporada actualizada correctamente');
+      } else {
+        alert('❌ Error al actualizar la temporada');
+        return;
+      }
     } else {
       await addSeason(seasonData);
     }
