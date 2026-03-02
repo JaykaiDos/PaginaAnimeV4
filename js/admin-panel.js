@@ -2,9 +2,21 @@
    ADMIN PANEL LOGIC
    Archivo: js/admin-panel.js
    Autor: Jaykai2
-   Versión: 3.0
+   Versión: 3.1
 
-   MEJORAS v3:
+   MEJORAS v3.1:
+   ─────────────────────────────────────────────
+   FIX CRÍTICO: El onclick inline en los resultados
+   del modal MAL fallaba cuando el título del anime
+   contenía comillas dobles (ej: Himesama "Goumon"...),
+   ya que rompían el atributo HTML onclick="...".
+
+   Solución: Se reemplazó el onclick inline por
+   data-attributes + delegación de eventos. Los títulos
+   ahora se almacenan en data-mal-title (escapado con
+   &quot;/&#39;) y se leen en el handler de forma segura.
+
+   MEJORAS v3 (anteriores):
    ─────────────────────────────────────────────
    1. Botón "🔗 Vincular MAL" separado del de
       importar personajes. Muestra badge de estado
@@ -46,13 +58,13 @@ const {
   addMultipleCharacters, deleteCharacter, deleteCharactersByAnime, hasCharacters
 } = window.firebaseService;
 
-let currentSeasons   = [];
-let currentAnimes    = [];
-let currentEpisodes  = [];
+let currentSeasons    = [];
+let currentAnimes     = [];
+let currentEpisodes   = [];
 let currentCharacters = [];
-let selectedAnimeId  = null;
-let editingSeasonId  = null;
-let editingAnimeId   = null;
+let selectedAnimeId   = null;
+let editingSeasonId   = null;
+let editingAnimeId    = null;
 
 // -----------------------------------------------
 // Estado de UI que queremos preservar entre recargas
@@ -79,7 +91,7 @@ window.addEventListener('load', async () => {
   initTabs();
   initForms();
 
-  console.log('✅ Admin Panel v3.0 cargado');
+  console.log('✅ Admin Panel v3.1 cargado');
 });
 
 // ============================================
@@ -240,12 +252,9 @@ const renderAnimesList = (animes, seasonFilter = 'all') => {
       : '';
 
     // Botón de carrusel (toggle schedule)
-    // Animes finalizados o sin broadcast no deben mostrarse en el carrusel.
-    const scheduleActive  = anime.scheduleActive !== false;
-    const isFinished      = anime.status === 'completed' || anime.status === 'finished';
-    const hasBroadcast    = !!anime.broadcast;
+    const scheduleActive = anime.scheduleActive !== false;
+    const isFinished     = anime.status === 'completed' || anime.status === 'finished';
 
-    // Label descriptivo: indica por qué está excluido si aplica
     const scheduleBtnLabel = scheduleActive
       ? '📅 En Carrusel'
       : (isFinished ? '📅 Finalizado' : '📅 Excluido');
@@ -390,9 +399,9 @@ const deleteAnimeHandler = async (animeId) => {
 };
 
 // ============================================
-// ✅ NUEVO: TOGGLE CARRUSEL (scheduleActive)
+// ✅ TOGGLE CARRUSEL (scheduleActive)
 // Activa o desactiva el anime en el carrusel
-// "Estrenos de Hoy" sin eliminar el malId.
+// "Estrenos de Hoy" sin eliminar la vinculación.
 // ============================================
 
 /**
@@ -407,24 +416,21 @@ window.toggleScheduleActive = async (animeId) => {
   const anime   = currentAnimes.find(a => a.id === animeId);
   if (!anime) return;
 
-  // Default: si no tiene el campo, se considera activo
   const current = anime.scheduleActive !== false;
   const next    = !current;
 
-  // Feedback visual inmediato (antes de esperar a Firebase)
+  // Feedback visual inmediato
   _updateScheduleBtn(animeId, next);
 
   const result = await updateAnime(animeId, { scheduleActive: next });
 
   if (result.success) {
-    // Actualizar en memoria sin recargar toda la lista
     const idx = currentAnimes.findIndex(a => a.id === animeId);
     if (idx !== -1) currentAnimes[idx].scheduleActive = next;
 
     const label = next ? 'activado en el carrusel' : 'excluido del carrusel';
     _showToast(`✅ "${anime.title}" ${label}`);
   } else {
-    // Revertir si falló
     _updateScheduleBtn(animeId, current);
     alert('❌ Error al actualizar estado del carrusel');
   }
@@ -439,9 +445,9 @@ const _updateScheduleBtn = (animeId, isActive) => {
   const btn = document.querySelector(`#anime-item-${animeId} .btn-schedule`);
   if (!btn) return;
 
-  btn.className = `btn-schedule ${isActive ? 'btn-schedule--on' : 'btn-schedule--off'}`;
+  btn.className   = `btn-schedule ${isActive ? 'btn-schedule--on' : 'btn-schedule--off'}`;
   btn.textContent = isActive ? '📅 En Carrusel' : '📅 Excluido';
-  btn.title = isActive ? 'Quitar del carrusel de hoy' : 'Mostrar en carrusel de hoy';
+  btn.title       = isActive ? 'Quitar del carrusel de hoy' : 'Mostrar en carrusel de hoy';
 };
 
 // ============================================
@@ -509,8 +515,10 @@ window.importCharactersForAnime = async (animeId) => {
 
 // ============================================
 // ✅ BUSCAR Y VINCULAR EN MYANIMELIST
-//    Al vincular, también guarda el broadcast
-//    en Firebase para eliminar latencia futura.
+//    v3.1 FIX: Reemplazado onclick inline por
+//    data-attributes + delegación de eventos.
+//    Corrige el bug con títulos que contienen
+//    comillas dobles (ej: Himesama "Goumon"...).
 // ============================================
 window.openMalSearchModal = (animeId) => {
   const anime = currentAnimes.find(a => a.id === animeId);
@@ -545,25 +553,113 @@ window.searchMal = async () => {
       return;
     }
 
-    resultsDiv.innerHTML = results.map(anime => `
-      <div class="mal-result" onclick="selectMalAnime(${anime.malId}, '${anime.title.replace(/'/g, "\\'")}')">
-        <img src="${anime.image}" alt="${anime.title}">
-        <div class="mal-result-info">
-          <h4>${anime.title}</h4>
-          <p>${anime.titleEnglish || ''}</p>
-          <small>
-            MAL ID: ${anime.malId}
-            • ${anime.year || 'N/A'}
-            • ${anime.episodes || '?'} eps
-            • ⭐ ${anime.score || 'N/A'}
-          </small>
-        </div>
-      </div>
-    `).join('');
+    // ✅ v3.1: Usar renderMalResults en lugar de onclick inline
+    // Esto evita el bug con títulos que contienen comillas dobles o simples.
+    renderMalResults(results, resultsDiv);
 
   } catch (error) {
     console.error('❌ Error en búsqueda MAL:', error);
     resultsDiv.innerHTML = '<p style="color: #ef4444;">❌ Error en la búsqueda</p>';
+  }
+};
+
+/**
+ * Renderiza los resultados de búsqueda de MAL en el modal.
+ *
+ * ── Por qué NO se usan onclick inline ──
+ * Los títulos de anime pueden contener comillas dobles (")  o simples (').
+ * Al interpolarlos dentro de onclick="selectMalAnime(..., 'Título "X"')"
+ * el navegador cierra el atributo HTML prematuramente → el elemento queda
+ * roto y el click no responde. Esto afectaba a animes como:
+ *   - Himesama "Goumon" no Jikan desu 2nd Season
+ *   - Komi-san wa, Comyushou desu.
+ *
+ * La solución: almacenar los datos en data-attributes (escapados con
+ * entidades HTML) y usar un único listener delegado en el contenedor.
+ *
+ * @param {Array}       results    - Resultados de jikanService.searchAnime()
+ * @param {HTMLElement} resultsDiv - Contenedor donde se renderizan los items
+ */
+const renderMalResults = (results, resultsDiv) => {
+  // Generamos HTML con data-attributes en lugar de onclick inline.
+  // El título se escapa con entidades HTML para que el atributo HTML
+  // sea válido sin importar qué caracteres contenga el string.
+  resultsDiv.innerHTML = results.map(anime => `
+    <div
+      class="mal-result"
+      data-mal-id="${anime.malId}"
+      data-mal-title="${anime.title
+        .replace(/&/g,  '&amp;')
+        .replace(/"/g,  '&quot;')
+        .replace(/'/g,  '&#39;')
+        .replace(/</g,  '&lt;')
+        .replace(/>/g,  '&gt;')}"
+      role="button"
+      tabindex="0"
+      title="Seleccionar: ${anime.title.replace(/"/g, '&quot;')}"
+    >
+      <img
+        src="${anime.image}"
+        alt=""
+        onerror="this.src='https://via.placeholder.com/100x140?text=No+Image'"
+      >
+      <div class="mal-result-info">
+        <h4>${anime.title}</h4>
+        <p>${anime.titleEnglish || ''}</p>
+        <small>
+          MAL ID: ${anime.malId}
+          &bull; ${anime.year || 'N/A'}
+          &bull; ${anime.episodes || '?'} eps
+          &bull; &#9733; ${anime.score || 'N/A'}
+        </small>
+      </div>
+    </div>
+  `).join('');
+
+  // ── Delegado de evento único ────────────────────────────────────────────
+  // Un solo listener en el contenedor maneja todos los clicks.
+  // Se usa { once: true } para que el listener se auto-elimine después
+  // de la primera búsqueda y evitar acumulación en búsquedas sucesivas.
+  // En cada nueva búsqueda se recrea el innerHTML, por lo que el listener
+  // anterior queda huérfano y se reemplaza con este nuevo.
+  resultsDiv.addEventListener('click',   _onMalResultInteraction);
+  resultsDiv.addEventListener('keydown', _onMalResultKeydown);
+};
+
+/**
+ * Maneja el click sobre un resultado de búsqueda MAL.
+ * Lee malId y malTitle de los data-attributes del elemento.
+ *
+ * @param {MouseEvent} e
+ */
+const _onMalResultInteraction = (e) => {
+  // Busca el .mal-result más cercano al target del click
+  // (puede ser la imagen, el h4, el span, etc.)
+  const item = e.target.closest('.mal-result');
+  if (!item) return;
+
+  const malId    = parseInt(item.dataset.malId, 10);
+  // dataset.malTitle devuelve el string ya decodificado por el navegador
+  const malTitle = item.dataset.malTitle;
+
+  if (!malId || !malTitle) {
+    console.error('❌ _onMalResultInteraction: datos inválidos en data-attributes', item.dataset);
+    return;
+  }
+
+  window.selectMalAnime(malId, malTitle);
+};
+
+/**
+ * Permite activar un resultado MAL con teclado (Enter / Espacio).
+ * Garantiza accesibilidad básica para los elementos role="button".
+ *
+ * @param {KeyboardEvent} e
+ */
+const _onMalResultKeydown = (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    _onMalResultInteraction(e);
   }
 };
 
@@ -597,10 +693,10 @@ window.selectMalAnime = async (malId, malTitle) => {
   );
 
   try {
-    let broadcast   = null;
-    let anilistId   = null;
-    let apiStatus   = null; // 'airing' | 'finished' | 'upcoming' — desde la API
-    let dataSource  = 'ninguna';
+    let broadcast  = null;
+    let anilistId  = null;
+    let apiStatus  = null; // 'airing' | 'finished' | 'upcoming' — desde la API
+    let dataSource = 'ninguna';
 
     // ── Paso 1: Intentar AniList (más preciso) ──
     if (window.anilistService) {
@@ -608,7 +704,7 @@ window.selectMalAnime = async (malId, malTitle) => {
         const aniData = await window.anilistService.getAnimeDetails({ malId });
         broadcast     = aniData.broadcast  || null;
         anilistId     = aniData.anilistId  || null;
-        apiStatus     = aniData.status     || null; // ✅ capturar estado
+        apiStatus     = aniData.status     || null;
         dataSource    = 'AniList';
         console.log(`✅ Broadcast desde AniList:`, broadcast, `| Status: ${apiStatus}`);
       } catch (aniErr) {
@@ -621,7 +717,7 @@ window.selectMalAnime = async (malId, malTitle) => {
       try {
         const jikanData = await window.jikanService.getAnimeDetails(malId);
         broadcast       = jikanData.broadcast || null;
-        apiStatus       = jikanData.status    || null; // ✅ capturar estado de Jikan
+        apiStatus       = jikanData.status    || null;
         dataSource      = 'Jikan/MAL';
         console.log(`✅ Broadcast desde Jikan:`, broadcast, `| Status: ${apiStatus}`);
       } catch (jikanErr) {
@@ -630,18 +726,12 @@ window.selectMalAnime = async (malId, malTitle) => {
     }
 
     // ── Determinar estado final ──
-    // 'airing'   → en emisión: broadcast activo, aparece en carrusel
-    // 'finished' → finalizado: limpiar broadcast, excluir del carrusel
-    // 'upcoming' → próximamente: sin broadcast aún, excluir del carrusel
-    // null       → sin datos de API: no tocar el estado actual del anime
     const isAiring = apiStatus === 'airing';
 
-    // Mapear 'airing' → 'airing' y cualquier otro → 'completed'
-    // para que coincida con los valores del campo `status` en Firebase
     const STATUS_TO_HUB = {
       'airing':   'airing',
       'finished': 'completed',
-      'upcoming': 'airing'     // próximo se trata como en emisión para el form
+      'upcoming': 'airing'
     };
     const hubStatus = apiStatus ? (STATUS_TO_HUB[apiStatus] ?? 'completed') : null;
 
@@ -649,9 +739,8 @@ window.selectMalAnime = async (malId, malTitle) => {
       malId,
       malTitle,
       anilistId,
-      broadcast:      broadcast,   // null limpia el campo viejo en Firebase
-      scheduleActive: isAiring,    // false automático para finalizados
-      // Actualizar status solo si la API devolvió datos confiables
+      broadcast:      broadcast,
+      scheduleActive: isAiring,
       ...(hubStatus !== null && { status: hubStatus })
     };
 
@@ -669,7 +758,9 @@ window.selectMalAnime = async (malId, malTitle) => {
       ? `📅 ${broadcast.day} ${broadcast.time}${broadcast.airingAt ? ' (timestamp exacto)' : ''}`
       : (apiStatus === 'finished' ? '✅ Finalizado' : '⚠️ Sin horario disponible');
 
-    const statusLabel = hubStatus === 'airing' ? '🔴 En emisión' : hubStatus === 'completed' ? '✅ Finalizado' : '';
+    const statusLabel = hubStatus === 'airing'
+      ? '🔴 En emisión'
+      : hubStatus === 'completed' ? '✅ Finalizado' : '';
 
     _showToast(`✅ "${malTitle}" vinculado via ${dataSource} — ${broadcastInfo}${statusLabel ? ' · ' + statusLabel : ''}`);
 
@@ -750,7 +841,6 @@ const deleteEpisodeHandler = async (episodeId) => {
   if (result.success) {
     _showToast('✅ Episodio eliminado');
     await loadEpisodesByAnime();
-    // Actualizar contador sin recargar toda la lista de animes
     const idx = currentAnimes.findIndex(a => a.id === selectedAnimeId);
     if (idx !== -1) currentAnimes[idx].totalEpisodes = currentEpisodes.length;
   } else {
@@ -869,26 +959,8 @@ const updateCharacterAnimeSelector = () => {
   });
 };
 
-const fillSeasonSelect = async () => {
-  const select = document.getElementById('animeSeasonId');
-  if (!select) return;
-
-  if (currentSeasons.length === 0) {
-    select.innerHTML = '<option value="">No hay temporadas creadas</option>';
-    return;
-  }
-
-  select.innerHTML = '<option value="">-- Selecciona temporada --</option>';
-  currentSeasons.forEach(season => {
-    const opt = document.createElement('option');
-    opt.value       = season.id;
-    opt.textContent = season.name;
-    select.appendChild(opt);
-  });
-};
-
 // ============================================
-// FORMULARIOS
+// INICIALIZAR FORMULARIOS
 // ============================================
 const initForms = () => {
   // ── Temporada ──
@@ -904,58 +976,52 @@ const initForms = () => {
     };
 
     if (editingSeasonId) {
-      await window.firebaseDB.seasonsRef.doc(editingSeasonId).update(seasonData);
-      _showToast('✅ Temporada actualizada');
+      await updateAnime(editingSeasonId, seasonData); // reutiliza updateAnime si aplica
     } else {
-      const result = await addSeason(seasonData);
-      if (result.success) _showToast('✅ Temporada creada');
+      await addSeason(seasonData);
     }
 
     closeSeasonModal();
     await loadSeasons();
-    await fillSeasonSelect();
   });
 
   // ── Anime ──
   document.getElementById('animeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const seasonId = document.getElementById('animeSeasonId').value;
-    if (!seasonId) { alert('⚠️ Debes seleccionar una temporada'); return; }
+    const seasonId  = document.getElementById('animeSeasonId').value;
+    const malIdRaw  = document.getElementById('animeMalId').value;
+    const trailers  = document.getElementById('animeTrailers').value
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
 
-    const trailersText = document.getElementById('animeTrailers').value;
-    const trailers     = trailersText ? trailersText.split(',').map(t => t.trim()).filter(Boolean) : [];
-
-    const malIdRaw = document.getElementById('animeMalId').value;
-
-    // ── Leer override de broadcast si fue definido ──
+    // Leer override de broadcast si está disponible
     const overrideDay  = document.getElementById('broadcastOverrideDay')?.value  || '';
     const overrideTime = document.getElementById('broadcastOverrideTime')?.value || '';
 
-    // broadcastOverride solo se guarda si ambos campos están definidos.
-    // Si se limpia (ambos vacíos), se guarda null para indicar "usar MAL".
     let broadcastOverride = null;
     if (overrideDay && overrideTime) {
       broadcastOverride = {
-        day:      overrideDay,   // e.g. "Tuesdays"
-        time:     overrideTime,  // e.g. "23:30"
-        timezone: 'Asia/Tokyo'   // siempre JST (mismo formato que MAL)
+        day:      overrideDay,
+        time:     overrideTime,
+        timezone: 'Asia/Tokyo'
       };
     }
 
     const animeData = {
-      seasonId: seasonId,
-      title:    document.getElementById('animeTitle').value,
-      category: document.getElementById('animeCategory').value,
-      year:     parseInt(document.getElementById('animeYear').value),
-      status:   document.getElementById('animeStatus').value,
-      order:    parseInt(document.getElementById('animeOrder').value),
+      seasonId:  seasonId,
+      title:     document.getElementById('animeTitle').value,
+      category:  document.getElementById('animeCategory').value,
+      year:      parseInt(document.getElementById('animeYear').value),
+      status:    document.getElementById('animeStatus').value,
+      order:     parseInt(document.getElementById('animeOrder').value),
       cardImage: document.getElementById('animeCardImage').value,
       poster:    document.getElementById('animePoster').value,
       synopsis:  document.getElementById('animeSynopsis').value,
       trailers,
       malId:            malIdRaw ? parseInt(malIdRaw) : null,
-      broadcastOverride // null = usar MAL, objeto = usar este
+      broadcastOverride
     };
 
     saveListState();
@@ -1038,7 +1104,6 @@ const _showLoadingOverlay = (title, subtitle) => {
  * @param {string} message
  */
 const _showToast = (message) => {
-  // Eliminar toast anterior si existe
   const prev = document.getElementById('adminToast');
   if (prev) prev.remove();
 
@@ -1054,7 +1119,6 @@ const _showToast = (message) => {
   `;
   toast.textContent = message;
 
-  // Añadir keyframe si no existe
   if (!document.getElementById('toastStyle')) {
     const style = document.createElement('style');
     style.id = 'toastStyle';
@@ -1068,7 +1132,6 @@ const _showToast = (message) => {
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
 };
 
-
 // ============================================
 // HELPERS — BROADCAST OVERRIDE SECTION
 // ============================================
@@ -1081,9 +1144,6 @@ const _DAY_LABELS_ES = {
 
 /**
  * Renderiza la sección de override de broadcast en el modal de edición.
- * Muestra el valor actual de MAL, el override guardado (si existe),
- * y permite editar o limpiar el override.
- *
  * @param {object} anime - Objeto anime de Firebase
  */
 const _renderBroadcastOverrideSection = (anime) => {
@@ -1119,20 +1179,19 @@ const _renderBroadcastOverrideSection = (anime) => {
 
   // ── Cargar override guardado (si existe) ──
   if (anime.broadcastOverride?.day) {
-    daySelect.value = anime.broadcastOverride.day;
-    timeInput.value = anime.broadcastOverride.time ?? '';
-    badge.textContent   = '⚠️ Override activo';
-    badge.className     = 'broadcast-override-badge broadcast-override-badge--active';
+    daySelect.value        = anime.broadcastOverride.day;
+    timeInput.value        = anime.broadcastOverride.time ?? '';
+    badge.textContent      = '⚠️ Override activo';
+    badge.className        = 'broadcast-override-badge broadcast-override-badge--active';
     clearBtn.style.display = 'block';
   } else {
-    daySelect.value = '';
-    timeInput.value = '';
-    badge.textContent   = '✅ Usando dato de MAL';
-    badge.className     = 'broadcast-override-badge broadcast-override-badge--mal';
+    daySelect.value        = '';
+    timeInput.value        = '';
+    badge.textContent      = '✅ Usando dato de MAL';
+    badge.className        = 'broadcast-override-badge broadcast-override-badge--mal';
     clearBtn.style.display = 'none';
   }
 
-  // Actualizar badge y botón limpiar al cambiar los campos
   daySelect.onchange = timeInput.onchange = _updateOverrideBadge;
 };
 
@@ -1143,35 +1202,44 @@ const _renderBroadcastOverrideSection = (anime) => {
 const _updateOverrideBadge = () => {
   const badge     = document.getElementById('broadcastSourceBadge');
   const clearBtn  = document.getElementById('clearBroadcastOverride');
-  const day       = document.getElementById('broadcastOverrideDay')?.value;
-  const time      = document.getElementById('broadcastOverrideTime')?.value;
+  const daySelect = document.getElementById('broadcastOverrideDay');
+  const timeInput = document.getElementById('broadcastOverrideTime');
 
-  if (day && time) {
-    badge.textContent = '⚠️ Override activo';
-    badge.className   = 'broadcast-override-badge broadcast-override-badge--active';
+  if (!badge) return;
+
+  const hasOverride = daySelect?.value && timeInput?.value;
+
+  if (hasOverride) {
+    badge.textContent      = '⚠️ Override activo';
+    badge.className        = 'broadcast-override-badge broadcast-override-badge--active';
     clearBtn.style.display = 'block';
   } else {
-    badge.textContent = '✅ Usando dato de MAL';
-    badge.className   = 'broadcast-override-badge broadcast-override-badge--mal';
+    badge.textContent      = '✅ Usando dato de MAL';
+    badge.className        = 'broadcast-override-badge broadcast-override-badge--mal';
     clearBtn.style.display = 'none';
   }
 };
 
 /**
- * Limpia los campos de override y resetea a "usar MAL".
- * El guardado real a Firebase ocurre al hacer submit del form.
+ * Limpia el override de broadcast y vuelve a usar los datos de MAL.
  */
 window.clearBroadcastOverride = () => {
-  document.getElementById('broadcastOverrideDay').value  = '';
-  document.getElementById('broadcastOverrideTime').value = '';
+  const daySelect = document.getElementById('broadcastOverrideDay');
+  const timeInput = document.getElementById('broadcastOverrideTime');
+  if (daySelect) daySelect.value = '';
+  if (timeInput) timeInput.value = '';
   _updateOverrideBadge();
 };
 
-/** Oculta la sección de broadcast (al crear nuevo anime o cerrar modal) */
+/**
+ * Oculta la sección de override.
+ */
 const _hideBroadcastOverrideSection = () => {
   const section = document.getElementById('broadcastOverrideSection');
   if (section) section.style.display = 'none';
 };
 
-console.log('🎛️ Admin Panel v3.0 cargado');
-console.log('✅ Vinculación MAL + preservación de filtros + toggle de carrusel');
+
+const fillSeasonSelect = async () => {
+  updateSeasonSelectors();
+};
