@@ -40,15 +40,6 @@ const loadSeasonsFromFirebase = async () => {
         };
       })
     );
-    
-    console.log('📊 Temporadas con contadores:', seasonsWithCounts);
-    
-    // -----------------------------------------------
-    // AGRUPAR TEMPORADAS POR AÑO
-    // El campo season.period tiene el formato "fall-2025",
-    // "winter-2026", etc. Extraemos el año del último
-    // segmento separado por guión.
-    // -----------------------------------------------
 
     /**
      * Extrae el año de un period string (ej: "fall-2025" → 2025).
@@ -158,8 +149,6 @@ const updateGlobalStats = (seasons) => {
   
   // Contar total de animes (sumando todos)
   const totalAnimes = seasons.reduce((sum, season) => sum + season.animeCount, 0);
-  
-  console.log(`📈 Estadísticas: ${totalSeasons} temporadas, ${totalAnimes} animes`);
   
   // Actualizar en el DOM
   const seasonsStatElement = document.querySelector('.stat-number[data-stat="seasons"]');
@@ -356,52 +345,10 @@ const addRippleEffect = () => {
   });
 };
 
-const style = document.createElement('style');
-style.textContent = `
-  .season-btn {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .ripple {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(0);
-    animation: ripple-animation 0.6s ease-out;
-    pointer-events: none;
-  }
-  
-  @keyframes ripple-animation {
-    to {
-      transform: scale(4);
-      opacity: 0;
-    }
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(style);
-
-// ============================================
-// MENSAJE DE CONSOLA
-// ============================================
-console.log(`
-╔═══════════════════════════════════════╗
-║   🎌 ANIME HUB 🎌                     ║
-║   Hub Principal de Temporadas         ║
-║   Hecho por: Jaykai2                  ║
-║   🔥 Conectado a Firebase             ║
-╚═══════════════════════════════════════╝
-`);
-
 // ============================================
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('✅ Hub cargado completamente');
   
   // Esperar a que Firebase esté listo
   if (window.firebaseService) {
@@ -425,8 +372,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     animateStats();
   }, 500);
   
-  const seasons = document.querySelectorAll('.season-card');
-  console.log(`📅 Temporadas disponibles: ${seasons.length}`);
 });
 
 // ============================================

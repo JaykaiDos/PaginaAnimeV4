@@ -614,3 +614,31 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Necesario para que el ripple se posicione correctamente */
+.season-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Elemento span creado por JS al hacer clic en .season-btn */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0);
+  animation: ripple-animation 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Animación de giro usada por el spinner de carga de temporadas */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
