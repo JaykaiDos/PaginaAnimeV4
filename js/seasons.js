@@ -1,22 +1,31 @@
 /* ============================================
    ANIME TEMPORADAS - JAVASCRIPT (DINÁMICO)
    Autor: Jaykai2
-   
+
    CHANGELOG v2.0 — Refactor de Seguridad:
-   - [NUEVO]     Agregada función escapeHTML() para prevención XSS
-   - [NUEVO]     Agregada función sanitizeUrl() para prevención de URL injection
+   - [NUEVO]      Agregada función escapeHTML() para prevención XSS
+   - [NUEVO]      Agregada función sanitizeUrl() para prevención de URL injection
    - [OPTIMIZADO] createAnimeCard() — todos los campos dinámicos ahora escapados
    - [OPTIMIZADO] renderFavoritesList() — fav.title ahora escapado
    - [OPTIMIZADO] trailersHtml — anime.title en atributo title="" ahora escapado
+
+   CHANGELOG v2.1 — Refactor de Favoritos (DRY + Robustez):
+   - [NUEVO]      readFavorites()  — lectura segura del localStorage con try/catch
+   - [NUEVO]      writeFavorites() — escritura segura del localStorage con try/catch
+   - [ELIMINADO]  localStorage.setItem/removeItem directos — reemplazados por helpers
+   - [NUEVO]      Validación de 'status' en handler del picker de favoritos
+   - [CORREGIDO]  Eliminado 'use strict' global — incompatible con scripts externos
+   - [CORREGIDO]  initFavoritesLogic() usa delegación de eventos para evitar
+                  acumulación de listeners duplicados en cada re-render
    ============================================ */
 
-// 1. CONFIGURACIÓN Y SERVICIOS
-const { getAnimesBySeason } = window.firebaseService || {};
-const animeContainer = document.getElementById('animeContainer');
-const SEASON_ID = animeContainer ? animeContainer.getAttribute('data-season-id') : null;
+// ============================================
+// CONFIGURACIÓN Y SERVICIOS
+// ============================================
 
-// Estado global de favoritos
-let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+const { getAnimesBySeason } = window.firebaseService || {};
+const animeContainer        = document.getElementById('animeContainer');
+const SEASON_ID             = animeContainer ? animeContainer.getAttribute('data-season-id') : null;
 
 
 // ============================================
@@ -31,7 +40,6 @@ let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
  * @param {*} str - Valor a sanitizar (se convierte a string si no lo es)
  * @returns {string} Cadena con caracteres especiales escapados
  */
-// [NUEVO] Función centralizada de escape — antes no existía en este archivo
 const escapeHTML = (str) => {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -47,22 +55,61 @@ const escapeHTML = (str) => {
  * en atributos src/href. Previene inyección de protocolos
  * peligrosos como javascript: o data:.
  *
- * @param {string} url - URL a validar
- * @param {string} [fallback=''] - Valor a retornar si la URL es inválida
+ * @param {string} url      - URL a validar
+ * @param {string} fallback - Valor a retornar si la URL es inválida
  * @returns {string} URL validada o fallback
  */
-// [NUEVO] Validación de URLs — antes se usaban directamente sin verificar
 const sanitizeUrl = (url, fallback = '') => {
     if (typeof url !== 'string' || url.trim() === '') return fallback;
     try {
         const parsed = new URL(url, window.location.origin);
-        // Solo permitir protocolos seguros
         if (!['https:', 'http:'].includes(parsed.protocol)) return fallback;
         return url;
     } catch {
         return fallback;
     }
 };
+
+
+// ============================================
+// UTILIDADES DE PERSISTENCIA — LOCALSTORAGE
+// ============================================
+
+/**
+ * Lee y parsea la lista de favoritos del localStorage de forma segura.
+ * Retorna un array vacío si el valor no existe, no es JSON válido,
+ * o no es un array (protección ante datos corruptos).
+ *
+ * @returns {Array<Object>}
+ */
+const readFavorites = () => {
+    try {
+        const raw = localStorage.getItem('favorites');
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        console.error('❌ Error al leer favoritos del localStorage:', err);
+        return [];
+    }
+};
+
+/**
+ * Persiste la lista de favoritos en localStorage de forma segura.
+ * Captura errores de cuota excedida u otros fallos de escritura.
+ *
+ * @param {Array<Object>} list - Lista de favoritos a guardar
+ */
+const writeFavorites = (list) => {
+    try {
+        localStorage.setItem('favorites', JSON.stringify(list));
+    } catch (err) {
+        console.error('❌ Error al guardar favoritos en localStorage:', err);
+    }
+};
+
+// Estado global de favoritos — inicializado con lectura segura
+let favorites = readFavorites();
 
 
 // ============================================
@@ -74,7 +121,7 @@ const sanitizeUrl = (url, fallback = '') => {
  * Soporta formatos: youtube.com/watch?v=..., youtu.be/..., y embeds directos.
  *
  * @param {string} url - URL de YouTube en cualquier formato
- * @returns {string} URL de embed o cadena vacía si no es válida
+ * @returns {string} URL de embed
  */
 const getYouTubeEmbedUrl = (url) => {
     let videoId = '';
@@ -104,7 +151,6 @@ const loadSeasonAnimes = async () => {
         renderSeasonAnimes(animes);
     } catch (error) {
         console.error("❌ Error cargando animes:", error);
-        // [SEGURIDAD] Mensaje de error estático — sin datos externos en el DOM
         animeContainer.innerHTML = `<p style="color:red; text-align:center;">Error al cargar los datos</p>`;
     }
 };
@@ -129,7 +175,6 @@ const renderSeasonAnimes = (animes) => {
     if (continuaciones.length > 0) {
         const seccionContinuaciones = document.createElement('h2');
         seccionContinuaciones.className   = 'section-title';
-        // [SEGURIDAD] Usando textContent para texto estático con emojis — sin riesgo
         seccionContinuaciones.textContent = '⭐ Continuaciones ⭐';
         animeContainer.appendChild(seccionContinuaciones);
         continuaciones.forEach(anime => animeContainer.appendChild(createAnimeCard(anime)));
@@ -139,15 +184,15 @@ const renderSeasonAnimes = (animes) => {
     if (nuevos.length > 0) {
         const seccionNuevos = document.createElement('h2');
         seccionNuevos.className   = 'section-title';
-        // [SEGURIDAD] Usando textContent para texto estático con emojis — sin riesgo
         seccionNuevos.textContent = '🆕 Nuevos Estrenos 🆕';
         animeContainer.appendChild(seccionNuevos);
         nuevos.forEach(anime => animeContainer.appendChild(createAnimeCard(anime)));
     }
 
-    initCarousels();
-    initFavoritesLogic();
     syncSearchCards();
+
+    // Sincronizar estado visual de botones tras re-render del DOM
+    updateFavoriteButtons();
 };
 
 
@@ -167,11 +212,7 @@ const createAnimeCard = (anime) => {
     const article = document.createElement('article');
     article.className = 'anime-card';
 
-    // --------------------------------------------------
-    // [SEGURIDAD] Sanitizar todos los campos del anime
-    // ANTES de usarlos en cualquier atributo o innerHTML
-    // --------------------------------------------------
-    // [OPTIMIZADO] Antes: anime.id, anime.title, etc. se usaban directamente sin escapar
+    // Sanitizar todos los campos del anime ANTES de usarlos en el DOM
     const safeId       = escapeHTML(anime.id);
     const safeTitle    = escapeHTML(anime.title);
     const safeSynopsis = escapeHTML(anime.synopsis || 'Sin descripción disponible.');
@@ -185,17 +226,15 @@ const createAnimeCard = (anime) => {
 
     // --------------------------------------------------
     // season → del nombre del archivo HTML actual.
-    // year   → campo directo del anime en Firestore
+    //   "winter-2026.html" → "winter", "fall-2025.html" → "fall"
+    // year   → campo directo del anime en Firestore (ej: 2026)
     // --------------------------------------------------
     const _pageFile  = window.location.pathname.split('/').pop();
     const _seasonKey = escapeHTML(_pageFile.split('-')[0] || '');
     article.setAttribute('data-season', _seasonKey);
     article.setAttribute('data-year',   escapeHTML(String(anime.year || '')));
 
-    // --------------------------------------------------
     // Construir HTML de trailers
-    // [OPTIMIZADO] anime.title en title="" ahora escapado con escapeHTML
-    // --------------------------------------------------
     const trailersHtml = (anime.trailers || [])
         .map(url => {
             if (url.includes('/shorts/')) return '';
@@ -218,13 +257,7 @@ const createAnimeCard = (anime) => {
         .filter(Boolean)
         .join('') || '<p class="no-trailers">No hay trailers disponibles</p>';
 
-    // --------------------------------------------------
-    // [SEGURIDAD] Construir innerHTML usando SOLO variables
-    // ya sanitizadas. NINGÚN dato de Firestore se inyecta
-    // directamente — todo pasa por escapeHTML o sanitizeUrl.
-    // --------------------------------------------------
-    // [OPTIMIZADO] Antes: anime.title, anime.id, anime.poster, etc.
-    //              sin escapar. Ahora: todas las variables son "safe*"
+    // innerHTML construido SOLO con variables ya sanitizadas
     article.innerHTML = `
         <div class="carousel">
             <div class="carousel-container">
@@ -274,16 +307,19 @@ const createAnimeCard = (anime) => {
 
 
 // ============================================
-// FUNCIONALIDADES DE UI (Módulos)
+// FUNCIONALIDADES DE UI
 // ============================================
 
+// --------------------------------------------
 // 1. CAROUSEL
+// --------------------------------------------
+
 const initCarousels = () => {
     document.querySelectorAll('.carousel-container').forEach(carousel => {
-        const container = carousel.querySelector('.carousel-images');
-        const images    = container.querySelectorAll('img');
-        const prevBtn   = carousel.querySelector('.prev');
-        const nextBtn   = carousel.querySelector('.next');
+        const container  = carousel.querySelector('.carousel-images');
+        const images     = container.querySelectorAll('img');
+        const prevBtn    = carousel.querySelector('.prev');
+        const nextBtn    = carousel.querySelector('.next');
         let currentIndex = 0;
 
         const updateCarousel = () => {
@@ -304,8 +340,10 @@ const initCarousels = () => {
     });
 };
 
+
+// --------------------------------------------
 // 2. FAVORITOS — Sistema dinámico con selector de estado
-// -------------------------------------------------------
+// --------------------------------------------
 
 /** Configuración de estados: clave → { label, icon, css } */
 const STATUS_MAP = {
@@ -314,13 +352,18 @@ const STATUS_MAP = {
     completed: { label: 'Finalizado', icon: '✅', css: 'completed' }
 };
 
+/** Valores de status válidos — evita procesar datos inesperados del DOM */
+const VALID_STATUSES = new Set(['watching', 'pending', 'completed', 'remove']);
+
 /**
  * Actualiza el aspecto visual del botón principal
  * según si el anime está en favoritos y su watchStatus.
+ *
  * @param {HTMLElement} mainBtn - .fav-btn--main
  * @param {string|null} status  - watchStatus actual o null si no está en favoritos
  */
 const applyBtnState = (mainBtn, status) => {
+    if (!mainBtn) return;
     const iconEl  = mainBtn.querySelector('.fav-btn__icon');
     const labelEl = mainBtn.querySelector('.fav-btn__label');
 
@@ -349,44 +392,62 @@ const closeAllPickers = (exceptId) => {
 };
 
 /**
- * Inicializa la lógica de favoritos en todas las tarjetas renderizadas.
- * Se llama desde renderSeasonAnimes() después de crear el DOM.
+ * Recorre todos los botones .fav-btn--main visibles y sincroniza
+ * su apariencia con el estado actual del array favorites.
+ * Se llama tras cada re-render del DOM de tarjetas.
+ */
+const updateFavoriteButtons = () => {
+    document.querySelectorAll('.fav-btn--main').forEach(mainBtn => {
+        const id  = mainBtn.dataset.id;
+        const fav = favorites.find(f => f.id === id);
+        applyBtnState(mainBtn, fav ? fav.watchStatus : null);
+    });
+};
+
+/**
+ * Registra la delegación de eventos de favoritos sobre animeContainer.
+ * Usar delegación en lugar de listeners individuales por botón evita la
+ * acumulación de handlers duplicados cada vez que el DOM se re-construye.
+ *
+ * IMPORTANTE: Se llama UNA SOLA VEZ desde DOMContentLoaded.
  */
 const initFavoritesLogic = () => {
 
-    const updateAllButtons = () => {
-        document.querySelectorAll('.fav-btn--main').forEach(mainBtn => {
-            const id  = mainBtn.dataset.id;
-            const fav = favorites.find(f => f.id === id);
-            applyBtnState(mainBtn, fav ? fav.watchStatus : null);
-        });
-    };
+    // ── Delegación principal: botón abrir picker + opciones del picker ──
+    animeContainer.addEventListener('click', (e) => {
 
-    // ── Botón principal: abre/cierra el picker ──
-    document.querySelectorAll('.fav-btn--main').forEach(mainBtn => {
-        mainBtn.addEventListener('click', (e) => {
+        // ── Clic en botón principal → abrir/cerrar picker ──
+        const mainBtn = e.target.closest('.fav-btn--main');
+        if (mainBtn) {
             e.stopPropagation();
             const id     = mainBtn.dataset.id;
-            const picker = document.querySelector(`.fav-status-picker[data-id="${id}"]`);
+            const picker = animeContainer.querySelector(`.fav-status-picker[data-id="${id}"]`);
             if (!picker) return;
 
             const isOpen = picker.classList.contains('open');
-            document.querySelectorAll('.fav-status-picker.open').forEach(p => {
-                if (p !== picker) p.classList.remove('open');
-            });
+            // Cerrar cualquier otro picker antes de abrir el nuevo
+            closeAllPickers(isOpen ? null : id);
             picker.classList.toggle('open', !isOpen);
-        });
-    });
+            return;
+        }
 
-    // ── Opciones del picker: guardar estado o eliminar ──
-    document.querySelectorAll('.fav-status-option').forEach(optBtn => {
-        optBtn.addEventListener('click', (e) => {
+        // ── Clic en opción del picker → guardar estado o eliminar ──
+        const optBtn = e.target.closest('.fav-status-option');
+        if (optBtn) {
             e.stopPropagation();
-            const id      = optBtn.dataset.id;
-            const status  = optBtn.dataset.status;
+
+            const id     = optBtn.dataset.id;
+            const status = optBtn.dataset.status;
+
+            // Validar status antes de operar
+            if (!id || !VALID_STATUSES.has(status)) {
+                console.warn('⚠️ Datos de favorito inválidos ignorados:', { id, status });
+                return;
+            }
+
             const card    = optBtn.closest('.anime-card');
-            const picker  = document.querySelector(`.fav-status-picker[data-id="${id}"]`);
-            const mainBtn = document.querySelector(`.fav-btn--main[data-id="${id}"]`);
+            const picker  = animeContainer.querySelector(`.fav-status-picker[data-id="${id}"]`);
+            const btnMain = animeContainer.querySelector(`.fav-btn--main[data-id="${id}"]`);
 
             if (status === 'remove') {
                 const idx = favorites.findIndex(f => f.id === id);
@@ -407,25 +468,22 @@ const initFavoritesLogic = () => {
                 }
             }
 
-            localStorage.setItem('favorites', JSON.stringify(favorites));
-            const fav = favorites.find(f => f.id === id);
-            applyBtnState(mainBtn, fav ? fav.watchStatus : null);
-            picker.classList.remove('open');
+            writeFavorites(favorites);
+            applyBtnState(btnMain, favorites.find(f => f.id === id)?.watchStatus ?? null);
+            if (picker) picker.classList.remove('open');
             renderFavoritesList();
-        });
+        }
     });
 
-    // ── Cerrar picker al clic fuera ──
+    // ── Cerrar picker al clic fuera del wrapper ──
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.fav-btn-wrapper')) closeAllPickers();
     });
-
-    updateAllButtons();
 };
 
 /**
- * Renderiza la lista de favoritos en el sidebar/sección de favoritos.
- * [OPTIMIZADO] fav.title ahora escapado con escapeHTML — antes era vulnerable a XSS
+ * Renderiza la lista de favoritos en la sección inferior de la página.
+ * Usa escapeHTML en fav.title para prevenir XSS.
  */
 const renderFavoritesList = () => {
     const favList = document.querySelector('.fav-list:not(.none)');
@@ -440,8 +498,6 @@ const renderFavoritesList = () => {
     } else {
         favNone.style.display = 'none';
         favList.style.display = 'block';
-        // [OPTIMIZADO] Antes: `<li>${fav.title}</li>` — sin escape
-        //              Ahora: escapeHTML() protege contra XSS en títulos maliciosos
         favList.innerHTML = favorites
             .map(fav => `<li>${escapeHTML(fav.title)}</li>`)
             .join('');
@@ -449,7 +505,10 @@ const renderFavoritesList = () => {
 };
 
 
+// --------------------------------------------
 // 3. BÚSQUEDA
+// --------------------------------------------
+
 let currentAnimeCards = [];
 
 const syncSearchCards = () => {
@@ -467,8 +526,8 @@ searchBar?.addEventListener('input', () => {
 
     // Ocultar título de sección si no hay tarjetas visibles en esa sección
     document.querySelectorAll('.section-title').forEach(sectionTitle => {
-        let sibling       = sectionTitle.nextElementSibling;
-        let hasVisible    = false;
+        let sibling    = sectionTitle.nextElementSibling;
+        let hasVisible = false;
 
         while (sibling && !sibling.classList.contains('section-title')) {
             if (sibling.classList.contains('anime-card') && sibling.style.display !== 'none') {
@@ -482,7 +541,10 @@ searchBar?.addEventListener('input', () => {
 });
 
 
+// --------------------------------------------
 // 4. DARK MODE
+// --------------------------------------------
+
 const darkModeToggle = document.getElementById('darkModeToggle');
 const body           = document.body;
 
@@ -508,22 +570,32 @@ darkModeToggle?.addEventListener('click', () => {
 // ============================================
 // INICIALIZACIÓN GLOBAL
 // ============================================
+
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Cargar preferencias de tema
     if (localStorage.getItem('darkMode') === 'on') applyDarkMode(true);
+
+    // 2. Renderizar lista de favoritos con datos actuales
     renderFavoritesList();
 
+    // 3. Registrar delegación de eventos UNA SOLA VEZ
+    //    ANTES se llamaba dentro de renderSeasonAnimes → listeners duplicados
+    initFavoritesLogic();
+
+    // 4. Iniciar carga de animes desde Firebase
     if (window.firebaseService) {
         loadSeasonAnimes();
     } else {
         console.error("❌ Firebase Service no detectado");
     }
 
+    // 5. Botón limpiar favoritos
     document.getElementById('clearFavoritesBtn')?.addEventListener('click', () => {
         if (favorites.length > 0 && confirm('¿Eliminar todos los favoritos?')) {
             favorites = [];
-            localStorage.removeItem('favorites');
+            writeFavorites([]);
             renderFavoritesList();
-            initFavoritesLogic();
+            updateFavoriteButtons();
         }
     });
 });

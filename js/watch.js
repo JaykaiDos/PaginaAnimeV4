@@ -1,190 +1,210 @@
 /* ============================================
    WATCH PAGE - JAVASCRIPT
    Autor: Jaykai2
+   Versión: 1.1 — OPTIMIZADO (DRY)
+
+   CAMBIOS v1.1:
+   ─────────────────────────────────────────────
+   · ELIMINADA loadWatchedEpisodes() → ahora en utils.js
+   · ELIMINADA saveWatchedEpisodes() → ahora en utils.js
+   · Todas las llamadas internas reemplazadas por
+     window.AnimeUtils.* (namespace centralizado)
+
+   Orden de carga requerido en HTML:
+     1. firebase-config.js
+     2. firebase-service.js
+     3. utils.js            ← NUEVO (obligatorio)
+     4. watch.js            ← ESTE ARCHIVO
    ============================================ */
 
-// Estado de la aplicación
-let currentAnime = null;
-let currentEpisodeNumber = 1;
-let currentEpisodes = [];
-let watchedEpisodes = [];
+'use strict';
 
-// Elementos del DOM
+/* --------------------------------------------------
+   ESTADO DE LA APLICACIÓN
+-------------------------------------------------- */
+let currentAnime         = null;
+let currentEpisodeNumber = 1;
+let currentEpisodes      = [];
+let watchedEpisodes      = [];
+
+/* --------------------------------------------------
+   REFERENCIAS AL DOM
+   Resueltas una sola vez al cargar el script.
+-------------------------------------------------- */
 const videoContainer = document.getElementById('videoContainer');
-const videoTitle = document.getElementById('videoTitle');
-const animeTitle = document.getElementById('animeTitle');
-const episodeNumber = document.getElementById('episodeNumber');
-const episodeTitle = document.getElementById('episodeTitle');
-const animeLink = document.getElementById('animeLink');
-const episodesList = document.getElementById('episodesList');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
+const videoTitle     = document.getElementById('videoTitle');
+const animeTitle     = document.getElementById('animeTitle');
+const episodeNumber  = document.getElementById('episodeNumber');
+const episodeTitle   = document.getElementById('episodeTitle');
+const animeLink      = document.getElementById('animeLink');
+const episodesList   = document.getElementById('episodesList');
+const prevBtn        = document.getElementById('prevBtn');
+const nextBtn        = document.getElementById('nextBtn');
 const markWatchedBtn = document.getElementById('markWatchedBtn');
 
-// ============================================
-// CARGAR EPISODIOS VISTOS
-// ============================================
-const loadWatchedEpisodes = (animeId) => {
-  const stored = localStorage.getItem(`watched_${animeId}`);
-  return stored ? JSON.parse(stored) : [];
-};
-
-// ============================================
-// GUARDAR EPISODIOS VISTOS
-// ============================================
-const saveWatchedEpisodes = (animeId, episodes) => {
-  localStorage.setItem(`watched_${animeId}`, JSON.stringify(episodes));
-};
-
-// ============================================
-// CONVERTIR LINKS DE DIFERENTES PLATAFORMAS
-// ============================================
+/* --------------------------------------------------
+   CONVERTIR LINKS DE DIFERENTES PLATAFORMAS
+   
+   Esta función es ESPECÍFICA de watch.js porque maneja
+   múltiples plataformas (Ok.ru, Drive, YouTube).
+   La parte de YouTube usa window.AnimeUtils.toYouTubeEmbed()
+   internamente para evitar duplicar esa lógica.
+   
+   @param {string} videoUrl - URL de la plataforma de video
+   @returns {string}        - URL en formato embed
+-------------------------------------------------- */
 const getEmbedUrl = (videoUrl) => {
-  // Ok.ru: Asegurar que tenga protocolo HTTPS
+  if (!videoUrl || typeof videoUrl !== 'string') return '';
+
+  // Ok.ru: asegurar protocolo HTTPS
   if (videoUrl.includes('ok.ru')) {
-    if (videoUrl.startsWith('//')) {
-      return 'https:' + videoUrl;
-    }
-    return videoUrl;
+    return videoUrl.startsWith('//') ? 'https:' + videoUrl : videoUrl;
   }
-  
-  // Google Drive: Si ya es un link de preview, retornarlo
-  if (videoUrl.includes('/preview')) {
-    return videoUrl;
-  }
-  
-  // Google Drive: Convertir link de view a preview
-  if (videoUrl.includes('/view')) {
-    return videoUrl.replace('/view', '/preview');
-  }
-  
-  // Google Drive: Extraer ID del archivo y crear URL de embed
+
+  // Google Drive: ya está en formato preview
+  if (videoUrl.includes('/preview')) return videoUrl;
+
+  // Google Drive: convertir /view a /preview
+  if (videoUrl.includes('/view')) return videoUrl.replace('/view', '/preview');
+
+  // Google Drive: extraer ID y construir URL de embed
   const fileIdMatch = videoUrl.match(/\/d\/([^/]+)/);
   if (fileIdMatch) {
     return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
   }
-  
-  // YouTube: Convertir a formato embed si es necesario
-  if (videoUrl.includes('youtube.com/watch')) {
-    const urlParams = new URLSearchParams(new URL(videoUrl).search);
-    const videoId = urlParams.get('v');
-    if (videoId) {
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
+
+  // YouTube: delegar al helper centralizado de utils.js
+  if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+    return window.AnimeUtils.toYouTubeEmbed(videoUrl);
   }
-  
-  if (videoUrl.includes('youtu.be/')) {
-    const videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
-  }
-  
-  // Para cualquier otra URL, retornarla tal cual
+
+  // Cualquier otra URL: retornarla tal cual
   return videoUrl;
 };
 
-// ============================================
-// CARGAR ANIME Y EPISODIOS DESDE FIREBASE
-// ============================================
+/* --------------------------------------------------
+   CARGAR ANIME Y EPISODIOS DESDE FIREBASE
+-------------------------------------------------- */
+
+/**
+ * Obtiene el anime y sus episodios desde Firestore,
+ * y los normaliza al formato interno de la página.
+ * @param {string} animeId
+ * @returns {Promise<{ anime: object, episodes: object[] }>}
+ */
 const loadAnimeAndEpisodesFromFirebase = async (animeId) => {
   try {
-    // Cargar información del anime
     const anime = await window.firebaseService.getAnimeById(animeId);
-    
-    if (!anime) {
-      throw new Error('Anime no encontrado');
-    }
-    
-    // Cargar episodios
+    if (!anime) throw new Error('Anime no encontrado');
+
     const episodes = await window.firebaseService.getEpisodesByAnime(animeId);
-    
-    if (episodes.length === 0) {
-      throw new Error('Este anime no tiene episodios');
-    }
-    
-    // Transformar al formato esperado
+    if (episodes.length === 0) throw new Error('Este anime no tiene episodios');
+
     currentAnime = {
-      id: anime.id,
-      title: anime.title,
+      id:       anime.id,
+      title:    anime.title,
       episodes: anime.totalEpisodes || episodes.length
     };
-    
-    currentEpisodes = episodes.map(ep => ({
-      number: ep.episodeNumber,
-      title: ep.title,
-      duration: ep.duration,
-      videoUrl: ep.videoUrl
-    }));
-    
-    // Ordenar por número de episodio
-    currentEpisodes.sort((a, b) => a.number - b.number);
-    
+
+    currentEpisodes = episodes
+      .map(ep => ({
+        number:   ep.episodeNumber,
+        title:    ep.title,
+        duration: ep.duration,
+        videoUrl: ep.videoUrl
+      }))
+      .sort((a, b) => a.number - b.number);
+
     console.log(`📺 ${currentEpisodes.length} episodios cargados para ${currentAnime.title}`);
-    
+
     return { anime: currentAnime, episodes: currentEpisodes };
-    
+
   } catch (error) {
     console.error('Error al cargar datos:', error);
     throw error;
   }
 };
 
-// ============================================
-// RENDERIZAR VIDEO PLAYER
-// ============================================
+/* --------------------------------------------------
+   RENDERIZAR VIDEO PLAYER
+-------------------------------------------------- */
+
+/**
+ * Inserta el iframe del video y actualiza toda la
+ * información de la UI (título, breadcrumb, botones).
+ * Usa window.AnimeUtils.saveWatchedEpisodes() para
+ * el marcado automático a los 5 segundos.
+ * @param {object} episode - { number, title, videoUrl, ... }
+ */
 const renderVideoPlayer = (episode) => {
   const embedUrl = getEmbedUrl(episode.videoUrl);
-  
+
   videoContainer.innerHTML = `
-    <iframe 
-      src="${embedUrl}" 
-      allow="autoplay; encrypted-media" 
+    <iframe
+      src="${embedUrl}"
+      allow="autoplay; encrypted-media"
       allowfullscreen
       title="${currentAnime.title} - Episodio ${episode.number}">
     </iframe>
   `;
 
-  // Actualizar información
-  videoTitle.textContent = `${currentAnime.title} - Episodio ${episode.number}`;
-  animeTitle.textContent = `📺 ${currentAnime.title}`;
+  // Actualizar información visible
+  videoTitle.textContent    = `${currentAnime.title} - Episodio ${episode.number}`;
+  animeTitle.textContent    = `📺 ${currentAnime.title}`;
   episodeNumber.textContent = `EP ${episode.number}`;
-  episodeTitle.textContent = `Episodio ${episode.number}`;
+  episodeTitle.textContent  = `Episodio ${episode.number}`;
 
   // Actualizar breadcrumb link
-  animeLink.href = `anime-details.html?id=${currentAnime.id}`;
+  animeLink.href        = `anime-details.html?id=${currentAnime.id}`;
   animeLink.textContent = `📺 ${currentAnime.title}`;
 
-  // Actualizar botón de visto
   updateWatchedButton();
 
-  // Marcar automáticamente como visto después de 5 segundos
+  // Marcado automático como visto después de 5 segundos
   setTimeout(() => {
     if (!watchedEpisodes.includes(episode.number)) {
       watchedEpisodes.push(episode.number);
-      saveWatchedEpisodes(currentAnime.id, watchedEpisodes);
+      // ✅ OPTIMIZADO: usa helper centralizado de utils.js
+      window.AnimeUtils.saveWatchedEpisodes(currentAnime.id, watchedEpisodes);
       updateWatchedButton();
       renderEpisodesList();
     }
   }, 5000);
 };
 
-// ============================================
-// RENDERIZAR LISTA DE EPISODIOS
-// ============================================
+/* --------------------------------------------------
+   RENDERIZAR LISTA DE EPISODIOS (SIDEBAR)
+-------------------------------------------------- */
+
+/**
+ * Regenera el listado lateral de episodios marcando
+ * el activo y los ya vistos.
+ */
 const renderEpisodesList = () => {
   if (!currentAnime || !currentEpisodes || currentEpisodes.length === 0) return;
 
   episodesList.innerHTML = currentEpisodes.map(ep => `
-    <div class="episode-item ${ep.number === currentEpisodeNumber ? 'active' : ''} ${watchedEpisodes.includes(ep.number) ? 'watched' : ''}"
-         onclick="loadEpisode(${ep.number})">
+    <div
+      class="episode-item
+        ${ep.number === currentEpisodeNumber ? 'active'   : ''}
+        ${watchedEpisodes.includes(ep.number) ? 'watched' : ''}"
+      onclick="loadEpisode(${ep.number})"
+    >
       <div class="episode-item-number">EP ${ep.number}</div>
       <div class="episode-item-title">${ep.title}</div>
     </div>
   `).join('');
 };
 
-// ============================================
-// CARGAR EPISODIO
-// ============================================
+/* --------------------------------------------------
+   NAVEGACIÓN DE EPISODIOS
+-------------------------------------------------- */
+
+/**
+ * Carga un episodio por número, actualiza la URL
+ * sin recargar la página y hace scroll al top.
+ * @param {number} episodeNum
+ */
 window.loadEpisode = (episodeNum) => {
   if (!currentAnime || !currentEpisodes) return;
 
@@ -193,106 +213,109 @@ window.loadEpisode = (episodeNum) => {
 
   currentEpisodeNumber = episodeNum;
 
-  // Actualizar URL sin recargar
+  // Actualizar URL sin recargar (History API)
   const newUrl = `${window.location.pathname}?anime=${currentAnime.id}&episode=${episodeNum}`;
   window.history.pushState({ anime: currentAnime.id, episode: episodeNum }, '', newUrl);
 
-  // Renderizar
   renderVideoPlayer(episode);
   renderEpisodesList();
   updateNavigationButtons();
 
-  // Scroll al top
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// ============================================
-// NAVEGACIÓN: EPISODIO ANTERIOR
-// ============================================
+/** Navega al episodio anterior si existe. */
 window.previousEpisode = () => {
-  if (currentEpisodeNumber > 1) {
-    loadEpisode(currentEpisodeNumber - 1);
-  }
+  if (currentEpisodeNumber > 1) loadEpisode(currentEpisodeNumber - 1);
 };
 
-// ============================================
-// NAVEGACIÓN: EPISODIO SIGUIENTE
-// ============================================
+/** Navega al episodio siguiente si existe. */
 window.nextEpisode = () => {
-  if (currentEpisodeNumber < currentAnime.episodes) {
-    loadEpisode(currentEpisodeNumber + 1);
-  }
+  if (currentEpisodeNumber < currentAnime.episodes) loadEpisode(currentEpisodeNumber + 1);
 };
 
-// ============================================
-// ACTUALIZAR BOTONES DE NAVEGACIÓN
-// ============================================
+/**
+ * Habilita o deshabilita los botones de navegación
+ * según la posición del episodio actual.
+ */
 const updateNavigationButtons = () => {
   prevBtn.disabled = currentEpisodeNumber <= 1;
   nextBtn.disabled = currentEpisodeNumber >= currentAnime.episodes;
 };
 
-// ============================================
-// TOGGLE EPISODIO VISTO
-// ============================================
+/* --------------------------------------------------
+   TOGGLE EPISODIO VISTO
+-------------------------------------------------- */
+
+/**
+ * Alterna el estado "visto" del episodio actual.
+ * Usa window.AnimeUtils.saveWatchedEpisodes() en lugar
+ * de la función local eliminada.
+ */
 window.toggleWatched = () => {
   const index = watchedEpisodes.indexOf(currentEpisodeNumber);
-  
+
   if (index !== -1) {
     watchedEpisodes.splice(index, 1);
   } else {
     watchedEpisodes.push(currentEpisodeNumber);
   }
 
-  saveWatchedEpisodes(currentAnime.id, watchedEpisodes);
+  // ✅ OPTIMIZADO: usa helper centralizado de utils.js
+  window.AnimeUtils.saveWatchedEpisodes(currentAnime.id, watchedEpisodes);
   updateWatchedButton();
   renderEpisodesList();
 };
 
-// ============================================
-// ACTUALIZAR BOTÓN DE VISTO
-// ============================================
+/**
+ * Actualiza el texto y estilo del botón "Marcar como Visto"
+ * según el estado del episodio actual.
+ */
 const updateWatchedButton = () => {
   const isWatched = watchedEpisodes.includes(currentEpisodeNumber);
-  
-  if (isWatched) {
-    markWatchedBtn.classList.add('watched');
-    markWatchedBtn.innerHTML = '✓ Marcado como Visto';
-  } else {
-    markWatchedBtn.classList.remove('watched');
-    markWatchedBtn.innerHTML = '✓ Marcar como Visto';
-  }
+  markWatchedBtn.classList.toggle('watched', isWatched);
+  markWatchedBtn.innerHTML = isWatched ? '✓ Marcado como Visto' : '✓ Marcar como Visto';
 };
 
-// ============================================
-// ATAJOS DE TECLADO
-// ============================================
+/* --------------------------------------------------
+   ATAJOS DE TECLADO
+-------------------------------------------------- */
 document.addEventListener('keydown', (e) => {
-  // Flecha izquierda: episodio anterior
+  // ← Episodio anterior
   if (e.key === 'ArrowLeft' && !prevBtn.disabled) {
     e.preventDefault();
     previousEpisode();
   }
-  
-  // Flecha derecha: episodio siguiente
+  // → Episodio siguiente
   if (e.key === 'ArrowRight' && !nextBtn.disabled) {
     e.preventDefault();
     nextEpisode();
   }
-  
-  // Tecla 'M': marcar como visto
+  // M: marcar como visto
   if (e.key === 'm' || e.key === 'M') {
     e.preventDefault();
     toggleWatched();
   }
 });
 
-// ============================================
-// CARGAR DESDE URL
-// ============================================
+/* --------------------------------------------------
+   MANEJAR NAVEGACIÓN DEL NAVEGADOR (BOTÓN ATRÁS)
+-------------------------------------------------- */
+window.addEventListener('popstate', (e) => {
+  if (e.state) loadFromUrl();
+});
+
+/* --------------------------------------------------
+   CARGAR DESDE URL
+-------------------------------------------------- */
+
+/**
+ * Punto de entrada: lee los parámetros de la URL
+ * y orquesta la carga del anime + episodio inicial.
+ */
 const loadFromUrl = async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const animeId = urlParams.get('anime');
+  const urlParams  = new URLSearchParams(window.location.search);
+  const animeId    = urlParams.get('anime');
   const episodeNum = parseInt(urlParams.get('episode')) || 1;
 
   if (!animeId) {
@@ -307,32 +330,31 @@ const loadFromUrl = async () => {
     return;
   }
 
-  // Mostrar loading
+  // Mostrar loading mientras se carga
   videoContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando video desde Firebase...</p></div>';
-  episodesList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando episodios...</p></div>';
+  episodesList.innerHTML   = '<div class="loading"><div class="spinner"></div><p>Cargando episodios...</p></div>';
 
   try {
-    // Cargar anime y episodios desde Firebase
     const data = await loadAnimeAndEpisodesFromFirebase(animeId);
-    
-    currentAnime = data.anime;
-    currentEpisodes = data.episodes;
-    currentEpisodeNumber = episodeNum;
-    watchedEpisodes = loadWatchedEpisodes(animeId);
 
-    // Verificar que el episodio existe
+    currentAnime         = data.anime;
+    currentEpisodes      = data.episodes;
+    currentEpisodeNumber = episodeNum;
+
+    // ✅ OPTIMIZADO: usa helper centralizado de utils.js
+    watchedEpisodes = window.AnimeUtils.loadWatchedEpisodes(animeId);
+
+    // Si el episodio pedido no existe, cargar el primero
     const episode = currentEpisodes.find(ep => ep.number === episodeNum);
     if (!episode) {
-      // Si no existe, cargar el primer episodio
       loadEpisode(1);
       return;
     }
 
-    // Renderizar
     renderVideoPlayer(episode);
     renderEpisodesList();
     updateNavigationButtons();
-    
+
   } catch (error) {
     console.error('Error:', error);
     videoContainer.innerHTML = `
@@ -346,35 +368,29 @@ const loadFromUrl = async () => {
   }
 };
 
-// ============================================
-// MANEJAR NAVEGACIÓN DEL NAVEGADOR
-// ============================================
-window.addEventListener('popstate', (e) => {
-  if (e.state) {
-    loadFromUrl();
-  }
-});
-
-// ============================================
-// INICIALIZACIÓN
-// ============================================
+/* --------------------------------------------------
+   INICIALIZACIÓN
+-------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('▶️ Página de reproducción cargada');
-  
-  // Esperar a que Firebase esté listo
+
   if (window.firebaseService) {
     await loadFromUrl();
   } else {
     console.error('❌ Firebase Service no está disponible');
-    videoContainer.innerHTML = '<div style="text-align: center; padding: 3rem;"><p style="color: #ef4444;">❌ Error: Firebase no está configurado</p></div>';
+    videoContainer.innerHTML = `
+      <div style="text-align: center; padding: 3rem;">
+        <p style="color: #ef4444;">❌ Error: Firebase no está configurado</p>
+      </div>
+    `;
   }
 });
 
 console.log(`
 ╔═══════════════════════════════════════╗
-║   ▶️ VIDEO PLAYER ▶️                 ║
+║   ▶️ VIDEO PLAYER v1.1 ▶️            ║
 ║   Reproducción de Episodios          ║
-║   🔥 Conectado a Firebase            ║
+║   🔥 Firebase + 🛠️ utils.js          ║
 ║   Hecho por: Jaykai2                 ║
 ║                                       ║
 ║   Atajos de Teclado:                 ║
