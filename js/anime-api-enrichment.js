@@ -144,16 +144,16 @@ const _formatDate = (isoDate) => {
 };
 
 /**
- * Convierte el horario de broadcast (en Asia/Tokyo por defecto)
- * a la hora local del usuario y devuelve la fecha + hora del
- * próximo episodio.
+ * ⚠️ FALLBACK: Convierte el horario de broadcast (Jikan/MAL)
+ * a la hora local del usuario.
  *
- * Estrategia:
- *  1. Construimos el próximo Date exacto del episodio en UTC,
- *     partiendo de la hora JST que provee Jikan.
- *  2. JS lo convierte automáticamente al timezone del navegador
- *     cuando usamos toLocaleTimeString / toLocaleDateString.
+ * NOTA: Esta función solo se llama si AniList NO proporciona
+ * nextAiringEpisode.airingAt (timestamp UTC exacto).
  *
+ * ❌ NO USAR ESTA FUNCIÓN PARA NUEVAS FEATURES
+ * Use _getNextEpisodeFromTimestamp() con Unix timestamp en su lugar.
+ *
+ * @deprecated - Solo fallback para Jikan cuando AniList falla
  * @param {object|null} broadcast - { day, time, timezone }
  * @returns {string|null}
  */
@@ -243,20 +243,31 @@ const _getNextEpisodeInfo = (broadcast) => {
 };
 
 /**
- * Genera el texto de "próximo capítulo" usando el timestamp
- * exacto de AniList. Convierte directamente al timezone local
- * del usuario — sin cálculos de offset manual.
+ * ✅ FUNCIÓN PRINCIPAL PARA MOSTRAR FECHAS DE ESTRENO
  *
- * @param {{ airingAt: number, episode: number }} nextAiring
- * @returns {string}
+ * Convierte el Unix timestamp UTC de AniList a la zona horaria
+ * local del navegador del usuario. Es simple, precisa y automática.
+ *
+ * CÓMO FUNCIONA:
+ * 1. AniList proporciona: airingAt = 1709481600 (Unix timestamp UTC)
+ * 2. new Date(airingAt * 1000) = Instante exacto en tiempo UTC
+ * 3. date.toLocaleTimeString('es-ES') = JS detecta TZ local automáticamente
+ * 4. Resultado: "martes, 3 de junio — 23:30 (ART)" en la zona horaria del usuario
+ *
+ * La misma hora se muestra diferente para cada usuario según su zona horaria,
+ * pero representa el mismo instante exacto en el tiempo.
+ *
+ * @param {{ airingAt: number, episode: number }} nextAiring - { airingAt: Unix timestamp, episode: número }
+ * @returns {string} - "día, fecha — hora (TZ)" o null si falla
  */
 const _getNextEpisodeFromTimestamp = (nextAiring) => {
   if (!nextAiring?.airingAt) return null;
 
   try {
-    const date = new Date(nextAiring.airingAt * 1000); // Unix → Date UTC
+    // Unix timestamp (segundos) → milisegundos → Date en UTC
+    const date = new Date(nextAiring.airingAt * 1000);
 
-    // JS convierte automáticamente al timezone local del navegador
+    // JavaScript convierte automáticamente a la zona horaria del navegador
     const localDate = date.toLocaleDateString('es-ES', {
       weekday: 'long', month: 'long', day: 'numeric'
     });
@@ -265,6 +276,7 @@ const _getNextEpisodeFromTimestamp = (nextAiring) => {
       hour: '2-digit', minute: '2-digit'
     });
 
+    // Obtiene nombre corto de la zona horaria local (e.g., "ART", "CET", "JST")
     const tzName = new Intl.DateTimeFormat('es-ES', { timeZoneName: 'short' })
       .formatToParts(date)
       .find(p => p.type === 'timeZoneName')?.value ?? '';
@@ -347,8 +359,13 @@ const renderApiEnrichment = (apiData, uploadedEpisodes) => {
         .join('')
     : '<span class="api-no-data">Sin información</span>';
 
-  // Próximo capítulo: usar timestamp exacto de AniList si disponible,
-  // sino calcular desde broadcast (Jikan fallback)
+  // ✅ PRÓXIMO CAPÍTULO: Flujo de obtención de fecha de estreno
+  // 
+  // Prioridad:
+  // 1. 🎯 AniList nextAiringEpisode.airingAt (Unix timestamp UTC — RECOMENDADO)
+  //    - Exacto, sin ambigüedad, compatible con todas las zonas horarias
+  // 2. 🔄 Fallback a Jikan broadcast si AniList no tiene datos
+  //    - Cálculos complejos, solo fallback histórico
   const nextEpInfo = isAiring
     ? (apiData.nextAiringEpisode?.airingAt
         ? _getNextEpisodeFromTimestamp(apiData.nextAiringEpisode)

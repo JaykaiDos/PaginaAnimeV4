@@ -263,11 +263,14 @@ const getAnimeDetailsAniList = async ({ anilistId, malId }) => {
     airedFrom:   startDate,
     airedTo:     endDate,
 
-    // ✅ Broadcast inferido del timestamp exacto
-    broadcast,
-
-    // ✅ Próximo episodio con timestamp Unix exacto
+    // ✅ Próximo episodio — FUENTE DE VERDAD para fechas de estreno
+    // AniList proporciona timestamp Unix UTC exacto (mismo para todo el mundo)
+    // Cada navegador lo convierte automáticamente a su zona horaria local
     nextAiring,
+
+    // ⚠️ DEPRECATED: broadcast solo se usa como fallback si nextAiring no existe
+    // Se calcula manualmente en JST (innecesario desde que AniList proporciona UTC timestamp)
+    broadcast,
 
     // Lista de próximos episodios
     upcomingEpisodes: (media.airingSchedule?.nodes ?? []).map(ep => ({
@@ -364,22 +367,35 @@ const _extractNextAiring = (media) => {
  * @param {number} airingAt - Unix timestamp UTC
  * @returns {{ day: string, time: string, timezone: string }}
  */
+/**
+ * ⚠️ DEPRECATED: Esta función ya no se usa activamente.
+ * 
+ * Antes se usaba para convertir el timestamp de AniList a formato JST para
+ * después calcular la hora local. Ahora es innecesaria porque:
+ * 
+ * 1. AniList proporciona Unix timestamp UTC exacto (airingAt)
+ * 2. new Date(airingAt * 1000) lo convierte automáticamente
+ * 3. toLocaleTimeString('es-ES') detecta automáticamente la zona horaria local
+ * 
+ * Se mantiene aquí solo como fallback histórico. Para nuevas features,
+ * usar directamente _getNextEpisodeFromTimestamp() en anime-api-enrichment.js
+ * 
+ * @deprecated - Usar nextAiringEpisode.airingAt como Unix timestamp
+ * @param {number} airingAt - Unix timestamp en segundos
+ * @returns {object} - { day, time, timezone, airingAt }
+ */
 const _inferBroadcastFromTimestamp = (airingAt) => {
   const DAYS_JST = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
-
-  const date = new Date(airingAt * 1000); // Unix → Date
-
-  // Extraer día y hora en JST (UTC+9)
+  const date = new Date(airingAt * 1000);
   const jstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
   const dayName = DAYS_JST[jstDate.getDay()];
   const hours   = String(jstDate.getHours()).padStart(2, '0');
   const minutes = String(jstDate.getMinutes()).padStart(2, '0');
 
   return {
-    day:      dayName,         // e.g. "Tuesdays"
-    time:     `${hours}:${minutes}`,  // e.g. "23:30"
+    day:      dayName,
+    time:     `${hours}:${minutes}`,
     timezone: 'Asia/Tokyo',
-    // ✅ Guardar el timestamp exacto para uso futuro
     airingAt: airingAt
   };
 };
