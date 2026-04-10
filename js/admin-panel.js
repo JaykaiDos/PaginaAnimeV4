@@ -1250,3 +1250,537 @@ const _hideBroadcastOverrideSection = () => {
 const fillSeasonSelect = async () => {
   updateSeasonSelectors();
 };
+
+/* ============================================================
+   BULK UPDATE — ACTUALIZACIÓN MASIVA DE ANIMES VINCULADOS
+   ============================================================
+
+   RESPONSABILIDADES:
+   ─────────────────────────────────────────────────────────────
+   1. openBulkUpdateModal()   → Abre el modal y calcula preview
+   2. closeBulkUpdateModal()  → Cierra y resetea el modal
+   3. _buildBulkCandidates()  → Filtra animes elegibles
+   4. startBulkUpdate()       → Orquesta el proceso completo
+   5. _updateSingleAnime()    → Actualiza un anime individual
+   6. _bulkLog()              → Agrega una línea al log visual
+   7. _updateBulkProgress()   → Actualiza barra y contador
+
+   CAMPOS QUE SE ACTUALIZAN POR ANIME:
+   ─────────────────────────────────────────────────────────────
+   • status          → 'airing' | 'completed'
+   • broadcast       → { day, time, timezone, airingAt? }
+   • scheduleActive  → true si status === 'airing', false si no
+   • malTitle        → Por si el título en MAL cambió
+   • anilistId       → Se guarda si AniList lo devuelve
+
+   CAMPOS QUE NUNCA SE TOCAN:
+   ─────────────────────────────────────────────────────────────
+   • broadcastOverride → Dato manual del admin (máxima prioridad)
+   • title             → Título propio del hub (no se sobreescribe)
+   • synopsis          → El admin puede haberla personalizado
+   • cardImage / poster → Imágenes propias del hub
+   • trailers           → URLs propias del hub
+
+   RATE LIMITING:
+   ─────────────────────────────────────────────────────────────
+   Usamos un delay de 700ms entre requests para respetar los
+   límites de AniList (90 req/min) y Jikan (3 req/seg).
+   Con 200 animes el proceso tarda ~2.5 min en el peor caso.
+   ============================================================ */
+
+// ── Constantes ──────────────────────────────────────────────
+/** Delay entre requests de API para respetar rate limits */
+const BULK_REQUEST_DELAY_MS = 700;
+
+/** Delay extra entre cada commit a Firestore (evitar cuota) */
+const BULK_FIRESTORE_DELAY_MS = 150;
+
+// ── Estado de la actualización en curso ─────────────────────
+let _bulkRunning  = false;   // true mientras el proceso está activo
+let _bulkAborted  = false;   // flag para cancelar si el usuario cierra
+
+// ============================================================
+// 1. ABRIR MODAL
+// ============================================================
+
+/**
+ * Abre el modal de actualización masiva, puebla el select de
+ * temporadas y calcula el preview de cuántos animes se procesarán.
+ */
+window.openBulkUpdateModal = () => {
+  // Prevenir apertura si ya hay un proceso activo
+  if (_bulkRunning) {
+    _showToast('⚠️ Ya hay una actualización en curso');
+    return;
+  }
+
+  _resetBulkModalUI();
+  _populateBulkSeasonFilter();
+  _updateBulkSummary();
+
+  // Recalcular preview cuando cambian los filtros
+  document.getElementById('bulkUpdateSeasonFilter')
+    .addEventListener('change', _updateBulkSummary);
+  document.getElementById('bulkUpdateStatusFilter')
+    .addEventListener('change', _updateBulkSummary);
+
+  document.getElementById('bulkUpdateModal').classList.add('show');
+};
+
+// ============================================================
+// 2. CERRAR MODAL
+// ============================================================
+
+/**
+ * Cierra el modal y señala abort si el proceso estaba corriendo.
+ * El proceso detecta el flag y se detiene de forma limpia.
+ */
+window.closeBulkUpdateModal = () => {
+  if (_bulkRunning) {
+    _bulkAborted = true; // El loop lo detecta y sale
+  }
+
+  document.getElementById('bulkUpdateModal').classList.remove('show');
+
+  // Remover listeners de filtro para evitar acumulación
+  const seasonSel = document.getElementById('bulkUpdateSeasonFilter');
+  const statusSel = document.getElementById('bulkUpdateStatusFilter');
+  seasonSel?.replaceWith(seasonSel.cloneNode(true));
+  statusSel?.replaceWith(statusSel.cloneNode(true));
+};
+
+// ============================================================
+// 3. CONSTRUIR LISTA DE CANDIDATOS
+// ============================================================
+
+/**
+ * Filtra currentAnimes según los selectores del modal y
+ * retorna solo los animes elegibles para actualización.
+ *
+ * Criterios de elegibilidad:
+ *   ✅ Tiene malId guardado en Firebase
+ *   ✅ Pasa el filtro de temporada (si se aplicó)
+ *   ✅ Pasa el filtro de estado (si se aplicó)
+ *
+ * @returns {object[]} Subconjunto de currentAnimes
+ */
+const _buildBulkCandidates = () => {
+  const seasonFilter = document.getElementById('bulkUpdateSeasonFilter')?.value ?? 'all';
+  const statusFilter = document.getElementById('bulkUpdateStatusFilter')?.value ?? 'all';
+
+  return currentAnimes.filter(anime => {
+    // Requiere MAL ID vinculado
+    if (!anime.malId) return false;
+
+    // Filtro de temporada
+    if (seasonFilter !== 'all' && anime.seasonId !== seasonFilter) return false;
+
+    // Filtro de estado
+    if (statusFilter !== 'all' && anime.status !== statusFilter) return false;
+
+    return true;
+  });
+};
+
+// ============================================================
+// 4. ACTUALIZAR RESUMEN DE PREVIEW
+// ============================================================
+
+/**
+ * Recalcula y muestra cuántos animes se procesarán con los
+ * filtros actuales. Se llama al abrir el modal y al cambiar filtros.
+ */
+const _updateBulkSummary = () => {
+  const summaryEl = document.getElementById('bulkUpdateSummaryText');
+  if (!summaryEl) return;
+
+  const candidates = _buildBulkCandidates();
+  const total      = currentAnimes.length;
+  const withMal    = currentAnimes.filter(a => a.malId).length;
+  const withoutMal = total - withMal;
+
+  const estimatedSeconds = Math.ceil(candidates.length * BULK_REQUEST_DELAY_MS / 1000);
+  const estimatedMin     = Math.floor(estimatedSeconds / 60);
+  const estimatedSec     = estimatedSeconds % 60;
+  const etaStr = estimatedMin > 0
+    ? `~${estimatedMin}m ${estimatedSec}s`
+    : `~${estimatedSec}s`;
+
+  summaryEl.innerHTML = `
+    📊 Total en base de datos: <strong>${total}</strong> animes<br>
+    🔗 Con MAL ID vinculado: <strong style="color:#6ee7b7;">${withMal}</strong>
+    &nbsp;·&nbsp;
+    ⚠️ Sin vincular (se omitirán): <strong style="color:#fbbf24;">${withoutMal}</strong><br>
+    🚀 A procesar con filtros actuales: <strong style="color:#48cae4;">${candidates.length}</strong>
+    &nbsp;·&nbsp;
+    ⏱️ Tiempo estimado: <strong style="color:#fef08a;">${etaStr}</strong>
+  `;
+
+  // Deshabilitar botón si no hay candidatos
+  const startBtn = document.getElementById('bulkUpdateStartBtn');
+  if (startBtn) startBtn.disabled = candidates.length === 0;
+};
+
+// ============================================================
+// 5. POBLAR SELECT DE TEMPORADAS DEL MODAL
+// ============================================================
+
+/**
+ * Rellena el select de temporadas del modal de actualización
+ * con los datos actuales de currentSeasons.
+ */
+const _populateBulkSeasonFilter = () => {
+  const select = document.getElementById('bulkUpdateSeasonFilter');
+  if (!select) return;
+
+  select.innerHTML = '<option value="all">Todas las temporadas</option>';
+
+  currentSeasons.forEach(season => {
+    const opt = document.createElement('option');
+    opt.value       = season.id;
+    opt.textContent = season.name;
+    select.appendChild(opt);
+  });
+};
+
+// ============================================================
+// 6. INICIAR LA ACTUALIZACIÓN
+// ============================================================
+
+/**
+ * Punto de entrada del proceso de actualización masiva.
+ * Orquesta: UI → candidatos → loop de API → resultado.
+ */
+window.startBulkUpdate = async () => {
+  const candidates = _buildBulkCandidates();
+
+  if (candidates.length === 0) {
+    _showToast('⚠️ No hay animes para actualizar con estos filtros');
+    return;
+  }
+
+  // ── Pasar UI a pantalla de progreso ──
+  document.getElementById('bulkUpdateConfig').style.display   = 'none';
+  document.getElementById('bulkUpdateProgress').style.display = 'block';
+  document.getElementById('bulkUpdateCloseBtn').title         = 'Cancelar actualización';
+
+  _bulkRunning = true;
+  _bulkAborted = false;
+
+  // Contadores de resultado
+  let countOk   = 0;
+  let countSkip = 0;
+  let countErr  = 0;
+
+  _bulkLog(`🚀 Iniciando actualización de ${candidates.length} animes…`, 'info');
+  _bulkLog(`⏱️ Delay entre requests: ${BULK_REQUEST_DELAY_MS}ms`, 'info');
+
+  // ── Loop principal ───────────────────────────────────────
+  for (let i = 0; i < candidates.length; i++) {
+    // Verificar si el usuario canceló
+    if (_bulkAborted) {
+      _bulkLog(`⛔ Proceso cancelado por el usuario (${i}/${candidates.length})`, 'info');
+      break;
+    }
+
+    const anime = candidates[i];
+
+    // Actualizar UI de progreso
+    _updateBulkProgress(i + 1, candidates.length);
+    document.getElementById('bulkCurrentAnime').textContent =
+      `Procesando: ${anime.title}`;
+
+    // Intentar actualización individual
+    const result = await _updateSingleAnime(anime);
+
+    if (result.status === 'ok') {
+      countOk++;
+      _bulkLog(`✅ ${anime.title} → ${result.detail}`, 'ok');
+    } else if (result.status === 'skip') {
+      countSkip++;
+      _bulkLog(`⏭️ ${anime.title} → ${result.detail}`, 'skip');
+    } else {
+      countErr++;
+      _bulkLog(`❌ ${anime.title} → ${result.detail}`, 'err');
+    }
+
+    // Delay entre requests para respetar rate limits
+    if (i < candidates.length - 1 && !_bulkAborted) {
+      await _bulkDelay(BULK_REQUEST_DELAY_MS);
+    }
+  }
+
+  // ── Finalizado ───────────────────────────────────────────
+  _bulkRunning = false;
+  _updateBulkProgress(candidates.length, candidates.length);
+  document.getElementById('bulkCurrentAnime').textContent = '';
+
+  // Mostrar pantalla de resultado
+  _showBulkResult(countOk, countSkip, countErr, candidates.length);
+
+  // Recargar la memoria local de animes sin re-renderizar todo
+  currentAnimes = await getAllAnimes();
+};
+
+// ============================================================
+// 7. ACTUALIZAR UN ANIME INDIVIDUAL
+// ============================================================
+
+/**
+ * Consulta AniList (con fallback a Jikan) para un anime,
+ * construye el payload de actualización y lo guarda en Firestore.
+ *
+ * @param {object} anime - Documento de anime de currentAnimes
+ * @returns {Promise<{ status: 'ok'|'skip'|'err', detail: string }>}
+ */
+const _updateSingleAnime = async (anime) => {
+  try {
+    let apiData    = null;
+    let dataSource = 'ninguna';
+
+    // ── Paso 1: Intentar AniList ──────────────────────────
+    if (window.anilistService) {
+      try {
+        const raw = await window.anilistService.getAnimeDetails({
+          anilistId: anime.anilistId || null,
+          malId:     anime.malId
+        });
+
+        apiData = {
+          status:    raw.status,          // 'airing' | 'finished' | 'upcoming'
+          broadcast: raw.broadcast,       // incluye airingAt timestamp exacto
+          malTitle:  raw.title    || null,
+          anilistId: raw.anilistId || null
+        };
+        dataSource = 'AniList';
+
+      } catch (aniErr) {
+        // AniList falló — silencioso, probamos Jikan
+        console.warn(`⚠️ AniList falló para "${anime.title}":`, aniErr.message);
+      }
+    }
+
+    // ── Paso 2: Fallback a Jikan ──────────────────────────
+    if (!apiData && window.jikanService) {
+      try {
+        const raw = await window.jikanService.getAnimeDetails(anime.malId);
+
+        apiData = {
+          status:    raw.status,
+          broadcast: raw.broadcast,
+          malTitle:  raw.title || null,
+          anilistId: null
+        };
+        dataSource = 'Jikan/MAL';
+
+      } catch (jikanErr) {
+        console.warn(`⚠️ Jikan también falló para "${anime.title}":`, jikanErr.message);
+      }
+    }
+
+    // Si ninguna API respondió, saltar este anime
+    if (!apiData) {
+      return { status: 'err', detail: 'Ambas APIs fallaron (rate limit o error de red)' };
+    }
+
+    // ── Construir payload de actualización ────────────────
+
+    // Mapear status de la API al formato interno del hub
+    const STATUS_TO_HUB = {
+      'airing':   'airing',
+      'finished': 'completed',
+      'upcoming': 'airing'
+    };
+    const hubStatus    = STATUS_TO_HUB[apiData.status] ?? 'completed';
+    const isAiring     = hubStatus === 'airing';
+
+    /**
+     * scheduleActive:
+     *   true  → anime en emisión Y sin override que lo excluya
+     *   false → anime finalizado O excluido manualmente
+     *
+     * IMPORTANTE: si el admin puso scheduleActive=false manualmente
+     * en un anime que SIGUE en emisión, NO lo reactivamos aquí.
+     * Solo actualizamos si el anime era 'airing' antes.
+     */
+    const wasAiring      = anime.status === 'airing';
+    const nowFinished    = hubStatus === 'completed';
+    const wasActive      = anime.scheduleActive !== false;
+
+    // Lógica de scheduleActive:
+    // - Si finalizó → desactivar (independiente del valor anterior)
+    // - Si sigue en emisión y antes estaba activo → mantener activo
+    // - Si sigue en emisión y estaba desactivado → mantener desactivado (decisión del admin)
+    let newScheduleActive;
+    if (nowFinished) {
+      newScheduleActive = false;
+    } else {
+      // isAiring === true aquí
+      newScheduleActive = wasActive; // Respetar la decisión del admin
+    }
+
+    const updatePayload = {
+      status:         hubStatus,
+      scheduleActive: newScheduleActive,
+
+      // Broadcast: solo actualizar si la API devolvió datos
+      ...(apiData.broadcast && { broadcast: apiData.broadcast }),
+
+      // anilistId: guardar si lo tenemos y el anime no lo tenía
+      ...(apiData.anilistId && !anime.anilistId && { anilistId: apiData.anilistId }),
+
+      // malTitle: actualizar si cambió (algunos animes renombran temporadas)
+      ...(apiData.malTitle && apiData.malTitle !== anime.malTitle && {
+        malTitle: apiData.malTitle
+      })
+
+      // ⛔ NO se toca: broadcastOverride, title, synopsis, cardImage, poster, trailers
+    };
+
+    // ── Guardar en Firestore ──────────────────────────────
+    const result = await updateAnime(anime.id, updatePayload);
+
+    if (!result.success) {
+      return { status: 'err', detail: 'Error al escribir en Firebase' };
+    }
+
+    // Pequeño delay adicional para Firestore (evitar cuota)
+    await _bulkDelay(BULK_FIRESTORE_DELAY_MS);
+
+    // ── Actualizar en memoria local ───────────────────────
+    const idx = currentAnimes.findIndex(a => a.id === anime.id);
+    if (idx !== -1) {
+      currentAnimes[idx] = { ...currentAnimes[idx], ...updatePayload };
+    }
+
+    // ── Construir mensaje de resultado ───────────────────
+    const statusEmoji  = hubStatus === 'airing' ? '🔴 En emisión' : '✅ Finalizado';
+    const broadcastStr = apiData.broadcast?.day
+      ? `${apiData.broadcast.day} ${apiData.broadcast.time}`
+      : 'sin horario';
+    const sourceStr    = `[${dataSource}]`;
+
+    return {
+      status: 'ok',
+      detail: `${statusEmoji} · ${broadcastStr} ${sourceStr}`
+    };
+
+  } catch (error) {
+    console.error(`❌ Error inesperado en _updateSingleAnime ("${anime.title}"):`, error);
+    return { status: 'err', detail: `Error: ${error.message}` };
+  }
+};
+
+// ============================================================
+// 8. MOSTRAR RESULTADO FINAL
+// ============================================================
+
+/**
+ * Reemplaza la pantalla de progreso con el resumen de resultados.
+ * @param {number} ok    - Animes actualizados correctamente
+ * @param {number} skip  - Animes omitidos
+ * @param {number} err   - Animes con error
+ * @param {number} total - Total procesado
+ */
+const _showBulkResult = (ok, skip, err, total) => {
+  document.getElementById('bulkUpdateProgress').style.display = 'none';
+  document.getElementById('bulkUpdateResult').style.display   = 'block';
+
+  const aborted = _bulkAborted;
+  const icon    = err > 0 ? (ok > 0 ? '⚠️' : '❌') : '✅';
+  const title   = aborted
+    ? 'Proceso cancelado'
+    : err === 0
+      ? '¡Actualización completada!'
+      : 'Actualización completada con errores';
+
+  const body = `
+    ✅ Actualizados correctamente: <strong>${ok}</strong><br>
+    ⏭️ Omitidos (sin cambios / cancelados): <strong>${skip}</strong><br>
+    ❌ Errores: <strong>${err}</strong><br>
+    📊 Total procesado: <strong>${ok + skip + err}</strong> de <strong>${total}</strong>
+    ${err > 0 ? '<br><br><small>Los errores suelen ser temporales (rate limit de APIs). Puedes volver a ejecutar el proceso para reintentar.</small>' : ''}
+  `;
+
+  document.getElementById('bulkResultIcon').textContent  = icon;
+  document.getElementById('bulkResultTitle').textContent = title;
+  document.getElementById('bulkResultBody').innerHTML    = body;
+};
+
+// ============================================================
+// 9. HELPERS DE UI DEL MODAL
+// ============================================================
+
+/**
+ * Agrega una línea de texto al log visual del modal.
+ * @param {string} text                          - Mensaje a mostrar
+ * @param {'ok'|'skip'|'err'|'info'} [type='info'] - Tipo (controla el color)
+ */
+const _bulkLog = (text, type = 'info') => {
+  const log = document.getElementById('bulkUpdateLog');
+  if (!log) return;
+
+  const line = document.createElement('div');
+  line.className   = `bulk-log-${type}`;
+  line.textContent = text;
+  log.appendChild(line);
+
+  // Auto-scroll al final del log
+  const wrapper = document.getElementById('bulkUpdateLogWrapper');
+  if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+};
+
+/**
+ * Actualiza la barra de progreso y el contador numérico.
+ * @param {number} current - Animes procesados hasta ahora
+ * @param {number} total   - Total de animes a procesar
+ */
+const _updateBulkProgress = (current, total) => {
+  const pct      = total > 0 ? Math.round((current / total) * 100) : 0;
+  const bar      = document.getElementById('bulkProgressBar');
+  const label    = document.getElementById('bulkProgressLabel');
+
+  if (bar)   bar.style.width       = `${pct}%`;
+  if (label) label.textContent     = `${current} / ${total} (${pct}%)`;
+};
+
+/**
+ * Resetea el modal a su estado inicial (pantalla de configuración).
+ * Se llama cada vez que se abre el modal.
+ */
+const _resetBulkModalUI = () => {
+  // Mostrar config, ocultar progreso y resultado
+  const config   = document.getElementById('bulkUpdateConfig');
+  const progress = document.getElementById('bulkUpdateProgress');
+  const result   = document.getElementById('bulkUpdateResult');
+
+  if (config)   config.style.display   = 'block';
+  if (progress) progress.style.display = 'none';
+  if (result)   result.style.display   = 'none';
+
+  // Limpiar log
+  const log = document.getElementById('bulkUpdateLog');
+  if (log) log.innerHTML = '';
+
+  // Resetear barra
+  _updateBulkProgress(0, 0);
+
+  const currentAnimeEl = document.getElementById('bulkCurrentAnime');
+  if (currentAnimeEl) currentAnimeEl.textContent = '';
+
+  // Resetear select de estado
+  const statusSel = document.getElementById('bulkUpdateStatusFilter');
+  if (statusSel) statusSel.value = 'all';
+
+  // Habilitar botón de inicio
+  const startBtn = document.getElementById('bulkUpdateStartBtn');
+  if (startBtn) startBtn.disabled = false;
+};
+
+/**
+ * Promesa que resuelve después de `ms` milisegundos.
+ * Se usa para respetar rate limits de las APIs.
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+const _bulkDelay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

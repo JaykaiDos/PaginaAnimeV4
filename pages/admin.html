@@ -68,9 +68,15 @@
     <section class="tab-content" id="animes-tab">
       <div class="section-header">
         <h2 class="section-title">📺 Gestión de Animes</h2>
-        <button class="btn-primary" onclick="openAnimeModal()">
-          ➕ Nuevo Anime
-        </button>
+        <!-- Grupo de acciones: Actualizar (animes vinculados) + Nuevo Anime -->
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+          <button class="btn-secondary" onclick="openBulkUpdateModal()" title="Actualiza estado y broadcast de todos los animes que ya tienen MAL ID vinculado">
+            🔄 Actualizar Vinculados
+          </button>
+          <button class="btn-primary" onclick="openAnimeModal()">
+            ➕ Nuevo Anime
+          </button>
+        </div>
       </div>
 
       <div class="filter-section">
@@ -377,6 +383,172 @@
           <!-- Resultados aquí -->
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL: ACTUALIZACIÓN MASIVA DE ANIMES VINCULADOS
+       Permite re-sincronizar status + broadcast de todos los
+       animes que ya tienen un MAL ID guardado en Firebase.
+       ============================================================ -->
+  <div class="modal" id="bulkUpdateModal">
+    <div class="modal-content modal-large">
+
+      <!-- Header -->
+      <div class="modal-header">
+        <h3 class="modal-title">🔄 Actualizar Animes Vinculados</h3>
+        <button class="btn-close" id="bulkUpdateCloseBtn" onclick="closeBulkUpdateModal()">✕</button>
+      </div>
+
+      <!-- Pantalla de configuración (visible antes de iniciar) -->
+      <div id="bulkUpdateConfig">
+
+        <!-- Info general -->
+        <div class="info-box" style="margin-bottom: 1.5rem;">
+          <p>
+            Este proceso re-consulta <strong>AniList</strong> (y Jikan como fallback) para cada
+            anime que ya tiene un MAL ID vinculado, y actualiza:
+          </p>
+          <ul style="margin: 0.75rem 0 0.5rem 1.5rem; color: #ade8f4; line-height: 2;">
+            <li>📡 <strong>Estado</strong> — En Emisión / Finalizado</li>
+            <li>📅 <strong>Broadcast</strong> — Día y hora de emisión (JST)</li>
+            <li>📺 <strong>Carrusel</strong> — Activa/desactiva en "Estrenos de Hoy"</li>
+          </ul>
+          <p style="margin-top: 0.5rem; color: #fbbf24;">
+            ⚠️ Los animes <strong>sin MAL ID</strong> serán omitidos automáticamente.<br>
+            ⚠️ El campo <strong>broadcastOverride</strong> del admin NO se sobreescribe.
+          </p>
+        </div>
+
+        <!-- Opciones de filtrado -->
+        <div class="form-row" style="margin-bottom: 1.5rem;">
+
+          <!-- Filtro por temporada -->
+          <div class="form-group">
+            <label for="bulkUpdateSeasonFilter">Filtrar por temporada</label>
+            <select id="bulkUpdateSeasonFilter">
+              <option value="all">Todas las temporadas</option>
+              <!-- Poblado dinámicamente -->
+            </select>
+            <small>Limitar la actualización a una temporada específica</small>
+          </div>
+
+          <!-- Solo animes en emisión -->
+          <div class="form-group">
+            <label for="bulkUpdateStatusFilter">Filtrar por estado actual</label>
+            <select id="bulkUpdateStatusFilter">
+              <option value="all">Todos los estados</option>
+              <option value="airing">Solo En Emisión</option>
+              <option value="completed">Solo Finalizados</option>
+            </select>
+            <small>Útil para actualizar solo los que siguen al aire</small>
+          </div>
+
+        </div>
+
+        <!-- Resumen de animes a procesar -->
+        <div id="bulkUpdateSummary" style="
+          background: rgba(0,0,0,0.3);
+          border: 1px solid #48cae440;
+          border-radius: 10px;
+          padding: 1rem 1.25rem;
+          margin-bottom: 1.5rem;
+          font-size: 0.9rem;
+          color: #ade8f4;
+        ">
+          <span id="bulkUpdateSummaryText">Calculando animes a procesar…</span>
+        </div>
+
+        <!-- Botón iniciar -->
+        <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+          <button class="btn-secondary" onclick="closeBulkUpdateModal()">Cancelar</button>
+          <button class="btn-primary" id="bulkUpdateStartBtn" onclick="startBulkUpdate()">
+            🚀 Iniciar Actualización
+          </button>
+        </div>
+      </div>
+
+      <!-- Pantalla de progreso (visible durante el proceso) -->
+      <div id="bulkUpdateProgress" style="display: none;">
+
+        <!-- Barra de progreso -->
+        <div style="margin-bottom: 1.25rem;">
+          <div style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+          ">
+            <span style="color: #6ee7b7; font-weight: 700; font-size: 0.9rem;">
+              Progreso
+            </span>
+            <span id="bulkProgressLabel" style="color: #fef08a; font-size: 0.85rem;">
+              0 / 0
+            </span>
+          </div>
+          <!-- Track -->
+          <div style="
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #48cae440;
+          ">
+            <!-- Fill -->
+            <div id="bulkProgressBar" style="
+              height: 100%;
+              width: 0%;
+              background: linear-gradient(90deg, #48cae4, #00b4d8);
+              border-radius: 20px;
+              transition: width 0.4s ease;
+            "></div>
+          </div>
+        </div>
+
+        <!-- Anime actual siendo procesado -->
+        <div id="bulkCurrentAnime" style="
+          text-align: center;
+          color: #ade8f4;
+          font-size: 0.85rem;
+          min-height: 1.5rem;
+          margin-bottom: 1rem;
+        "></div>
+
+        <!-- Log de resultados -->
+        <div style="
+          background: rgba(0,0,0,0.4);
+          border: 1px solid #48cae420;
+          border-radius: 10px;
+          padding: 0.75rem;
+          max-height: 280px;
+          overflow-y: auto;
+        " id="bulkUpdateLogWrapper">
+          <div id="bulkUpdateLog" style="
+            font-size: 0.78rem;
+            line-height: 1.8;
+            color: #ade8f4;
+            font-family: 'Roboto Mono', monospace;
+          ">
+            <!-- Líneas de log se insertan aquí -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pantalla de resultado final -->
+      <div id="bulkUpdateResult" style="display: none; text-align: center; padding: 1.5rem 0;">
+        <div id="bulkResultIcon" style="font-size: 3.5rem; margin-bottom: 1rem;">✅</div>
+        <h3 id="bulkResultTitle" style="color: #6ee7b7; margin-bottom: 0.75rem; font-size: 1.3rem;"></h3>
+        <p  id="bulkResultBody"  style="color: #ade8f4; font-size: 0.9rem; line-height: 1.7;"></p>
+        <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button class="btn-secondary" onclick="closeBulkUpdateModal()">Cerrar</button>
+          <button class="btn-primary"   onclick="closeBulkUpdateModal(); loadAllAnimes();">
+            🔁 Recargar Lista
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 

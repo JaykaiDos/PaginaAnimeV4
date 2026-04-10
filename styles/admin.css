@@ -855,6 +855,44 @@ html {
   color: #fca5a5;
 }
 
+/* ============================================
+   BULK UPDATE MODAL — Log lines
+   ============================================ */
+
+/* Línea de log: éxito */
+.bulk-log-ok {
+  color: #6ee7b7;
+}
+
+/* Línea de log: omitido (sin malId, ya finalizado, etc.) */
+.bulk-log-skip {
+  color: #48cae480;
+}
+
+/* Línea de log: error */
+.bulk-log-err {
+  color: #fca5a5;
+}
+
+/* Línea de log: info / neutral */
+.bulk-log-info {
+  color: #fef08a;
+}
+
+/* Scrollbar personalizada del log */
+#bulkUpdateLogWrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+#bulkUpdateLogWrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#bulkUpdateLogWrapper::-webkit-scrollbar-thumb {
+  background: rgba(72, 202, 228, 0.35);
+  border-radius: 6px;
+}
+
 /* ── Badges de MAL ── */
 .meta-tag.mal-linked {
   background: rgba(16, 185, 129, 0.15);
